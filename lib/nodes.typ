@@ -142,6 +142,12 @@
   )
 }
 
+#let resolve-between(ctx, el-a, el-b) = {
+  let pt-a = cetz.coordinate.resolve(ctx, (name: el-a, anchor: "center")).at(1)
+  let pt-b = cetz.coordinate.resolve(ctx, (name: el-b, anchor: "center")).at(1)
+  cetz.vector.scale(cetz.vector.add(pt-a, pt-b), .5)
+}
+
 #let node(
   origin,
   body,
@@ -189,52 +195,64 @@
     )
     let (anchor, loc, size) = if type(origin) == dictionary {
       let (dir, spec) = origin.pairs().first()
-      let (el, dist, align) = if type(spec) == array {
-        if spec.len() == 2 {
-          let (el, dist) = spec
-          (el, dist, "center")
-        }
-        else {
-          spec
-        }
-      }
-      else {
-        (spec, 0, "center")
-      }
-      let dist = cetz.util.resolve-number(ctx, dist)
 
-      if dir in outer {
+      if dir == "between" {
+        let (el-a, el-b) = spec
         // make size absolute
         let width = cetz.util.resolve-number(ctx, width)
         let height = cetz.util.resolve-number(ctx, height)
-
-        (
-          "center",
-          resolve-outer(ctx, dir, el, dist, align, width, height),
-          (rel: (width, height))
-        )
-      }
-      else if dir in inner {
-        // resolve ratios to container-relative sizes
-        let (width, height) = if type(width) == ratio or type(height) == ratio {
-          let con-size = get-element-size(ctx, el)
-          let width = if type(width) == ratio { float(width * con-size.at(0)) } else { width }
-          let height = if type(height) == ratio { float(height * con-size.at(1)) } else { height }
-          (width, height)
-        }
-        else {
-          (width, height)
-        }
-
-        // make size absolute
-        let width = cetz.util.resolve-number(ctx, width)
-        let height = cetz.util.resolve-number(ctx, height)
-
-        let (loc, size) = resolve-inner(dir, el, dist, width, height)
-        ("center", loc, size)
+        let mid = resolve-between(ctx, el-a, el-b)
+        let loc = cetz.vector.add(mid, (-width / 2, -height / 2, 0))
+        ("center", loc, (rel: (width, height)))
       }
       else {
-        (style.at("anchor", default: "center"), origin, (rel: (width, height)))
+        let (el, dist, align) = if type(spec) == array {
+          if spec.len() == 2 {
+            let (el, dist) = spec
+            (el, dist, "center")
+          }
+          else {
+            spec
+          }
+        }
+        else {
+          (spec, 0, "center")
+        }
+        let dist = cetz.util.resolve-number(ctx, dist)
+
+        if dir in outer {
+          // make size absolute
+          let width = cetz.util.resolve-number(ctx, width)
+          let height = cetz.util.resolve-number(ctx, height)
+
+          (
+            "center",
+            resolve-outer(ctx, dir, el, dist, align, width, height),
+            (rel: (width, height))
+          )
+        }
+        else if dir in inner {
+          // resolve ratios to container-relative sizes
+          let (width, height) = if type(width) == ratio or type(height) == ratio {
+            let con-size = get-element-size(ctx, el)
+            let width = if type(width) == ratio { float(width * con-size.at(0)) } else { width }
+            let height = if type(height) == ratio { float(height * con-size.at(1)) } else { height }
+            (width, height)
+          }
+          else {
+            (width, height)
+          }
+
+          // make size absolute
+          let width = cetz.util.resolve-number(ctx, width)
+          let height = cetz.util.resolve-number(ctx, height)
+
+          let (loc, size) = resolve-inner(dir, el, dist, width, height)
+          ("center", loc, size)
+        }
+        else {
+          (style.at("anchor", default: "center"), origin, (rel: (width, height)))
+        }
       }
     }
     else {
