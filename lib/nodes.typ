@@ -433,17 +433,34 @@
         (s, s)
       }
 
+      // Floating-point arithmetic can produce near-zero values indistinguishable
+      // from zero when the two anchors are nominally at the same coordinate.
+      // Use an epsilon threshold so we catch those cases too.
+      let _eps = 1e-10
       let bend-val = if bend != auto {
-        cetz.util.resolve-number(ctx, bend)
+        let v = cetz.util.resolve-number(ctx, bend)
+        assert(v != 0, message: "bend must be non-zero")
+        v
       } else {
         // Default: half the span in the routing direction
         if routing == "south" or routing == "north" {
-          calc.abs(b.at(0) - a.at(0)) / 2
+          let span = calc.abs(b.at(0) - a.at(0))
+          if span < _eps {
+            panic("edge: routing \"" + routing + "\" requires the two endpoints " +
+              "to differ in X, but both have the same X coordinate. " +
+              "Either use a different routing direction or supply an explicit bend value.")
+          }
+          span / 2
         } else {
-          calc.abs(b.at(1) - a.at(1)) / 2
+          let span = calc.abs(b.at(1) - a.at(1))
+          if span < _eps {
+            panic("edge: routing \"" + routing + "\" requires the two endpoints " +
+              "to differ in Y, but both have the same Y coordinate. " +
+              "Either use a different routing direction or supply an explicit bend value.")
+          }
+          span / 2
         }
       }
-      assert(bend-val != 0, message: "The bend value cannot be 0 (wrong routing direction?)")
 
       // Compute the 2 intermediate waypoints, applying shift to the x (for
       // north/south) or y (for west/east) of each endpoint.
