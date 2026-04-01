@@ -287,3 +287,150 @@
     cetz.draw.content(pos, anchor: anc, align(body-align)[#body])
   })
 }
+
+#let _edge-place-label(
+  label-name,
+  label,
+  label-pos,
+  label-dist,
+  label-align,
+  label-angle,
+  label-inset,
+) = {
+  // Parse label-pos: can be just a ratio (defaults to "north") or (ratio, side)
+  let (pos-ratio, side) = if type(label-pos) == array {
+    label-pos
+  } else {
+    (label-pos, "north")
+  }
+
+  cetz.draw.get-ctx((ctx) => {
+    let label-content = box(inset: label-inset, rotate(label-angle)[#label])
+
+    // Resolve the position along the line path
+    let pos-pct = float(pos-ratio) * 100
+    let pt = cetz.coordinate.resolve(ctx, (name: label-name, anchor: repr(pos-pct) + "%")).at(1)
+
+    // The side determines the direction to offset and the anchor used to
+    // place the label box flush against the line point.
+    //   side "north" -> label sits above -> anchor its "south" edge at the point
+    //   side "south" -> label sits below -> anchor its "north" edge
+    //   side "west"  -> label sits left  -> anchor its "east" edge
+    //   side "east"  -> label sits right -> anchor its "west" edge
+    let (anchor, nx, ny) = if side == "north" {
+      ("south", 0, 1)
+    } else if side == "south" {
+      ("north", 0, -1)
+    } else if side == "west" {
+      ("east", -1, 0)
+    } else if side == "east" {
+      ("west", 1, 0)
+    }
+
+    // Apply the additional perpendicular distance
+    let dist = cetz.util.resolve-number(ctx, label-dist)
+    let label-pt = (pt.at(0) + nx * dist, pt.at(1) + ny * dist, pt.at(2))
+
+    cetz.draw.content(label-pt, anchor: anchor, align(label-align)[#label-content])
+  })
+}
+
+#let edge(
+  label: none,
+  label-pos: (50%, "north"),
+  label-dist: 0,
+  label-align: center,
+  label-angle: 0deg,
+  label-inset: .3em,
+  routing: none,
+  bend: auto,
+  ..args,
+) = {
+  // Separate positional (coordinates) from named (style) arguments
+  let points = args.pos()
+  let style = args.named()
+
+  // Extract name from style
+  let user-name = style.at("name", default: none)
+  let line-name = if user-name != none { user-name } else { "__edge__" }
+  if "name" in style {
+    let _ = style.remove("name")
+  }
+
+  if routing == none {
+    // --- Straight line (no routing) ---
+    cetz.draw.line(
+      ..points,
+      name: line-name,
+      ..style,
+    )
+
+    if label != none {
+      _edge-place-label(line-name, label, label-pos, label-dist, label-align, label-angle, label-inset)
+    }
+  } else {
+    // --- 3-segment routed line ---
+    // Requires exactly 2 positional points (start and end).
+    let (pt-start, pt-end) = (points.at(0), points.at(1))
+
+    cetz.draw.get-ctx((ctx) => {
+      let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
+      let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
+
+      let bend-val = if bend != auto {
+        cetz.util.resolve-number(ctx, bend)
+      } else {
+        // Default: half the span in the routing direction
+        if routing == "south" or routing == "north" {
+          calc.abs(b.at(0) - a.at(0)) / 2
+        } else {
+          calc.abs(b.at(1) - a.at(1)) / 2
+        }
+      }
+      assert(bend-val != 0, message: "The bend value cannot be 0 (wrong routing direction?)")
+
+      // Compute the 2 waypoints based on routing direction.
+      //
+      //   "south":  A → down by bend → across → up to B
+      //   "north":  A → up by bend → across → down to B
+      //   "west":   A → left by bend → across → right to B
+      //   "east":   A → right by bend → across → left to B
+      let (p1, p2) = if routing == "south" {
+        (
+          (a.at(0), a.at(1) - bend-val, a.at(2)),
+          (b.at(0), a.at(1) - bend-val, a.at(2)),
+        )
+      } else if routing == "north" {
+        (
+          (a.at(0), a.at(1) + bend-val, a.at(2)),
+          (b.at(0), a.at(1) + bend-val, a.at(2)),
+        )
+      } else if routing == "west" {
+        (
+          (a.at(0) - bend-val, a.at(1), a.at(2)),
+          (a.at(0) - bend-val, b.at(1), a.at(2)),
+        )
+      } else if routing == "east" {
+        (
+          (a.at(0) + bend-val, a.at(1), a.at(2)),
+          (a.at(0) + bend-val, b.at(1), a.at(2)),
+        )
+      }
+
+      // Draw the full 3-segment line
+      cetz.draw.line(
+        a, p1, p2, b,
+        name: line-name,
+        ..style,
+      )
+
+      if label != none {
+        // Draw an invisible line for the middle segment so we can anchor
+        // the label percentage to it rather than the full path.
+        let mid-name = line-name + "__mid__"
+        cetz.draw.line(p1, p2, name: mid-name, stroke: none)
+        _edge-place-label(mid-name, label, label-pos, label-dist, label-align, label-angle, label-inset)
+      }
+    })
+  }
+}
