@@ -344,6 +344,7 @@
   label-inset: .3em,
   routing: none,
   bend: auto,
+  shift: 0,
   ..args,
 ) = {
   // Separate positional (coordinates) from named (style) arguments
@@ -358,7 +359,7 @@
   }
 
   if routing == none {
-    // --- Straight line (no routing) ---
+    // --- Straight line (no routing) — shift is ignored ---
     cetz.draw.line(
       ..points,
       name: line-name,
@@ -373,21 +374,32 @@
     // Requires exactly 2 positional points (start and end).
     //   "horizontal":  A → (B.x, A.y)  — purely horizontal at A's y
     //   "vertical":    A → (A.x, B.y)  — purely vertical at A's x
+    //
+    // shift offsets the line perpendicular to its direction:
+    //   "horizontal": shifts vertically (y offset)
+    //   "vertical":   shifts horizontally (x offset)
     assert(points.len() == 2, message: "horizontal/vertical routing requires exactly 2 points")
     let (pt-start, pt-end) = (points.at(0), points.at(1))
 
     cetz.draw.get-ctx((ctx) => {
       let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
       let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
+      let s = cetz.util.resolve-number(ctx, shift)
 
-      let target = if routing == "horizontal" {
-        (b.at(0), a.at(1), a.at(2))
+      let (a-shifted, target) = if routing == "horizontal" {
+        (
+          (a.at(0), a.at(1) + s, a.at(2)),
+          (b.at(0), a.at(1) + s, a.at(2)),
+        )
       } else {
-        (a.at(0), b.at(1), a.at(2))
+        (
+          (a.at(0) + s, a.at(1), a.at(2)),
+          (a.at(0) + s, b.at(1), a.at(2)),
+        )
       }
 
       cetz.draw.line(
-        a, target,
+        a-shifted, target,
         name: line-name,
         ..style,
       )
@@ -399,11 +411,27 @@
   } else {
     // --- 3-segment routed line ---
     // Requires exactly 2 positional points (start and end).
+    //
+    // shift offsets start and end in the direction of the middle segment:
+    //   "north"/"south": middle is horizontal → shift is an x offset
+    //   "west"/"east":   middle is vertical   → shift is a y offset
+    //
+    // shift can be a single value (same for both endpoints) or an array
+    // (shift-a, shift-b) for independent per-endpoint control.
     let (pt-start, pt-end) = (points.at(0), points.at(1))
 
     cetz.draw.get-ctx((ctx) => {
       let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
       let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
+
+      // Resolve shift into two scalar values
+      let (sa, sb) = if type(shift) == array {
+        (cetz.util.resolve-number(ctx, shift.at(0)),
+         cetz.util.resolve-number(ctx, shift.at(1)))
+      } else {
+        let s = cetz.util.resolve-number(ctx, shift)
+        (s, s)
+      }
 
       let bend-val = if bend != auto {
         cetz.util.resolve-number(ctx, bend)
@@ -417,37 +445,54 @@
       }
       assert(bend-val != 0, message: "The bend value cannot be 0 (wrong routing direction?)")
 
-      // Compute the 2 waypoints based on routing direction.
+      // Compute the 2 intermediate waypoints, applying shift to the x (for
+      // north/south) or y (for west/east) of each endpoint.
       //
       //   "south":  A → down by bend → across → up to B
       //   "north":  A → up by bend → across → down to B
       //   "west":   A → left by bend → across → right to B
       //   "east":   A → right by bend → across → left to B
-      let (p1, p2) = if routing == "south" {
+      let (a-shifted, b-shifted, p1, p2) = if routing == "south" {
+        let ax = a.at(0) + sa
+        let bx = b.at(0) + sb
         (
-          (a.at(0), a.at(1) - bend-val, a.at(2)),
-          (b.at(0), a.at(1) - bend-val, a.at(2)),
+          (ax, a.at(1), a.at(2)),
+          (bx, b.at(1), b.at(2)),
+          (ax, a.at(1) - bend-val, a.at(2)),
+          (bx, a.at(1) - bend-val, a.at(2)),
         )
       } else if routing == "north" {
+        let ax = a.at(0) + sa
+        let bx = b.at(0) + sb
         (
-          (a.at(0), a.at(1) + bend-val, a.at(2)),
-          (b.at(0), a.at(1) + bend-val, a.at(2)),
+          (ax, a.at(1), a.at(2)),
+          (bx, b.at(1), b.at(2)),
+          (ax, a.at(1) + bend-val, a.at(2)),
+          (bx, a.at(1) + bend-val, a.at(2)),
         )
       } else if routing == "west" {
+        let ay = a.at(1) + sa
+        let by = b.at(1) + sb
         (
-          (a.at(0) - bend-val, a.at(1), a.at(2)),
-          (a.at(0) - bend-val, b.at(1), a.at(2)),
+          (a.at(0), ay, a.at(2)),
+          (b.at(0), by, b.at(2)),
+          (a.at(0) - bend-val, ay, a.at(2)),
+          (a.at(0) - bend-val, by, a.at(2)),
         )
       } else if routing == "east" {
+        let ay = a.at(1) + sa
+        let by = b.at(1) + sb
         (
-          (a.at(0) + bend-val, a.at(1), a.at(2)),
-          (a.at(0) + bend-val, b.at(1), a.at(2)),
+          (a.at(0), ay, a.at(2)),
+          (b.at(0), by, b.at(2)),
+          (a.at(0) + bend-val, ay, a.at(2)),
+          (a.at(0) + bend-val, by, a.at(2)),
         )
       }
 
       // Draw the full 3-segment line
       cetz.draw.line(
-        a, p1, p2, b,
+        a-shifted, p1, p2, b-shifted,
         name: line-name,
         ..style,
       )
