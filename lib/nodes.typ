@@ -368,6 +368,34 @@
     if label != none {
       _edge-place-label(line-name, label, label-pos, label-dist, label-align, label-angle, label-inset)
     }
+  } else if routing == "horizontal" or routing == "vertical" {
+    // --- Single straight segment (horizontal or vertical) ---
+    // Requires exactly 2 positional points (start and end).
+    //   "horizontal":  A → (B.x, A.y)  — purely horizontal at A's y
+    //   "vertical":    A → (A.x, B.y)  — purely vertical at A's x
+    assert(points.len() == 2, message: "horizontal/vertical routing requires exactly 2 points")
+    let (pt-start, pt-end) = (points.at(0), points.at(1))
+
+    cetz.draw.get-ctx((ctx) => {
+      let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
+      let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
+
+      let target = if routing == "horizontal" {
+        (b.at(0), a.at(1), a.at(2))
+      } else {
+        (a.at(0), b.at(1), a.at(2))
+      }
+
+      cetz.draw.line(
+        a, target,
+        name: line-name,
+        ..style,
+      )
+
+      if label != none {
+        _edge-place-label(line-name, label, label-pos, label-dist, label-align, label-angle, label-inset)
+      }
+    })
   } else {
     // --- 3-segment routed line ---
     // Requires exactly 2 positional points (start and end).
