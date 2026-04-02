@@ -12,8 +12,7 @@
   rgb("#BBBBBB"),
 ).map(c => c.lighten(50%))
 
-#let big-gap = .5
-#let gap = .3
+#let gap = .5
 
 #let block(pos, lbl, ..args) = node(
   pos,
@@ -23,21 +22,11 @@
   ..args
 )
 
-#let app(pos, lbl, ..args) = block(
-  pos,
-  lbl,
-  fill: colors.at(0),
-  width: 4cm,
-  height: 1.1cm,
-  ..args,
-)
-
 #let serv(pos, lbl, ..args) = block(
-  pos,
-  lbl,
+  pos, lbl,
   fill: colors.at(2),
-  width: 4cm,
-  height: 1.5cm,
+  width: 3.8cm,
+  height: gap * 2,
   ..args,
 )
 
@@ -51,67 +40,34 @@
   text(size: .8em)[#no],
 )
 
-#let call(..args) = edge(stroke: 3pt, mark: (end: ">"), ..args)
-
 #cetz.canvas({
-  import cetz.draw: line, circle, content
-
   block((0, 0), [Hardware], fill: colors.at(4), width: 8cm, name: "hw")
   block(
-    (north-of: ("hw", big-gap)),
+    (north-of: ("hw", gap)),
     [Microkernel],
     fill: colors.at(1),
     width: 8cm,
     name: "kernel"
   )
+  serv((north-of: ("kernel", gap * 3, "left")),  [Network], name: "net")
+  serv((north-of: ("kernel", gap * 3, "right")), [Driver],  name: "drv")
 
-  serv(
-    (north-of: ("kernel", big-gap * 3, "right")),
-    [Driver],
-    width: 3.8cm,
-    height: big-gap * 2,
-    name: "drv",
-  )
-  serv(
-    (north-of: ("kernel", big-gap * 3, "left")),
-    [Network],
-    width: 3.8cm,
-    height: big-gap * 2,
-    name: "app",
-  )
-
-  call(
-    "app.south",
-    "kernel.north",
-    label: box-no([1]),
-    label-pos: (50%, "west"),
-    routing: "vertical",
-    shift: -.5,
-  )
-  call(
-    "drv.south",
-    "kernel.north",
-    label: box-no([2]),
-    label-pos: (50%, "east"),
-    routing: "vertical",
-    shift: .5,
-    mark: (start: ">"),
-  )
-  call(
-    "drv.south",
-    "kernel.north",
-    label: box-no([3]),
-    label-pos: (50%, "west"),
-    routing: "vertical",
-    shift: -.5,
-  )
-  call(
-    "app.south",
-    "kernel.north",
-    label: box-no([4]),
-    label-pos: (50%, "east"),
-    routing: "vertical",
-    shift: .5,
-    mark: (start: ">"),
-  )
+  for (node, side, shift, no) in (
+    ("net", "west", -.5, [1]),
+    ("drv", "east",  .5, [2]),
+    ("drv", "west", -.5, [3]),
+    ("net", "east",  .5, [4]),
+  ) {
+    let reverse = side == "east"
+    edge(
+      node + ".south",
+      "kernel.north",
+      label: box-no(no),
+      label-pos: (50%, side),
+      routing: "vertical",
+      shift: shift,
+      mark: if reverse { (start: ">") } else { (end: ">") },
+      stroke: 3pt,
+    )
+  }
 })
