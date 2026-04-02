@@ -1,6 +1,6 @@
 #import "@preview/cetz:0.4.2"
 
-#let get-element-size(ctx, name) = {
+#let _get-element-size(ctx, name) = {
   import cetz: drawable, path-util
 
   let element = ctx.nodes.at(name)
@@ -52,7 +52,7 @@
   )
 }
 
-#let resolve-outer(ctx, dir, el, dist, align, width, height) = {
+#let _resolve-outer(ctx, dir, el, dist, align, width, height) = {
   // "north-of" -> "north"
   let edge = dir.slice(0, -3)
   // Resolve the element's edge anchor
@@ -61,7 +61,7 @@
   // Calculate alignment offset
   let align-offset = (0, 0, 0)
   if align != "center" {
-    let el-size = get-element-size(ctx, el)
+    let el-size = _get-element-size(ctx, el)
     if edge == "north" or edge == "south" {
       let off = width / 2 - el-size.at(0) / 2
       if align == "left" {
@@ -115,7 +115,7 @@
   (rel: offset, to: edge-pt)
 }
 
-#let resolve-inner(pos, el, dist, width, height) = {
+#let _resolve-inner(pos, el, dist, width, height) = {
   let y-start = if pos.starts-with("in-north") {
     -height - dist
   }
@@ -142,12 +142,57 @@
   )
 }
 
-#let resolve-between(ctx, el-a, el-b) = {
+#let _resolve-between(ctx, el-a, el-b) = {
   let pt-a = cetz.coordinate.resolve(ctx, (name: el-a, anchor: "center")).at(1)
   let pt-b = cetz.coordinate.resolve(ctx, (name: el-b, anchor: "center")).at(1)
   cetz.vector.scale(cetz.vector.add(pt-a, pt-b), .5)
 }
 
+/// Draw a rectangular node (box) with a label on a CeTZ canvas.
+///
+/// The node's position and size are controlled by `origin`, which can be:
+/// - A plain CeTZ coordinate: places the node at that coordinate. The anchor
+///   used to attach the node to the coordinate defaults to `"center"` but can
+///   be overridden via the `anchor` named style argument.
+/// - A dictionary with one of the following keys:
+///   - `"north-of"`, `"south-of"`, `"east-of"`, `"west-of"`,
+///     `"north-east-of"`, `"north-west-of"`, `"south-east-of"`, `"south-west-of"`:
+///     places the node adjacent to an existing named element. The value may be
+///     just the element name (string), a two-element array `(name, dist)`, or a
+///     three-element array `(name, dist, align)`. The `align` is "left", "right",
+///     "top", or "bottom" and specifies the alignment of the new element relative
+///     to the element `name`. For example, with "north-of" and "left" the new
+///     element is placed north of the `name` and its left border is aligned the
+///     left border of `name`.
+///   - `"in-north"`, `"in-south"`, `"in-east"`, `"in-west"`,
+///     `"in-north-east"`, `"in-north-west"`, `"in-south-east"`, `"in-south-west"`:
+///     places the node *inside* an existing named element, anchored to the
+///     given inner edge/corner. The value follows the same conventions as the
+///     outer-placement keys above. `width` and `height` may be given as ratios
+///     (e.g. `50%`) to size the child relative to the container.
+///   - `"between"`: centres the node between two existing elements. The value
+///     must be a two-element array `(el-a, el-b)`.
+///
+/// The remaining arguments are:
+/// - `body` (`content`) -- Content rendered inside the node.
+/// - `body-pos` (`string`) -- Anchor of the node's rectangle used to attach
+///   the body. One of `"center"`, `"north"`, `"south"`, `"east"`, `"west"`.
+///   Defaults to `"center"`.
+/// - `body-dist` (`length`) -- Additional offset between the body and the
+///   `body-pos` anchor. Defaults to `0pt`.
+/// - `body-align` (`alignment`) -- Typst alignment applied to the body
+///   content. Defaults to `center`.
+/// - `body-angle` (`angle`) -- Rotation applied to the body content before
+///   measuring and drawing. Defaults to `0deg`.
+/// - `width` (`auto` or `length` or `ratio`) -- Width of the node. `auto`
+///   sizes to fit the body. A `ratio` is resolved relative to the container
+///   when using an inner-placement `origin`. Defaults to `auto`.
+/// - `height` (`auto` or `length` or `ratio`) -- Height of the node. Same
+///   semantics as `width`. Defaults to `auto`.
+/// - `inset` (`length`) -- Inset applied around the body inside the node box.
+///   Defaults to `0.3em`.
+/// - `..style` -- Additional named CeTZ `rect` style arguments (e.g. `name`,
+///   `fill`, `stroke`, `anchor`, `radius`, …).
 #let node(
   origin,
   body,
@@ -201,7 +246,7 @@
         // make size absolute
         let width = cetz.util.resolve-number(ctx, width)
         let height = cetz.util.resolve-number(ctx, height)
-        let mid = resolve-between(ctx, el-a, el-b)
+        let mid = _resolve-between(ctx, el-a, el-b)
         let loc = cetz.vector.add(mid, (-width / 2, -height / 2, 0))
         ("center", loc, (rel: (width, height)))
       }
@@ -227,14 +272,14 @@
 
           (
             "center",
-            resolve-outer(ctx, dir, el, dist, align, width, height),
+            _resolve-outer(ctx, dir, el, dist, align, width, height),
             (rel: (width, height))
           )
         }
         else if dir in inner {
           // resolve ratios to container-relative sizes
           let (width, height) = if type(width) == ratio or type(height) == ratio {
-            let con-size = get-element-size(ctx, el)
+            let con-size = _get-element-size(ctx, el)
             let width = if type(width) == ratio { float(width * con-size.at(0)) } else { width }
             let height = if type(height) == ratio { float(height * con-size.at(1)) } else { height }
             (width, height)
@@ -247,7 +292,7 @@
           let width = cetz.util.resolve-number(ctx, width)
           let height = cetz.util.resolve-number(ctx, height)
 
-          let (loc, size) = resolve-inner(dir, el, dist, width, height)
+          let (loc, size) = _resolve-inner(dir, el, dist, width, height)
           ("center", loc, size)
         }
         else {
@@ -335,6 +380,48 @@
   })
 }
 
+/// Draw a directed or undirected edge (line) between two CeTZ coordinates or
+/// named element anchors, with optional label and routing.
+///
+/// Routing modes (controlled by `routing`):
+/// - `none` (default): a straight line between the two positional points.
+///   `shift` is ignored in this mode.
+/// - `"horizontal"`: a single horizontal segment at the start point's y
+///   coordinate. `shift` offsets the line vertically.
+/// - `"vertical"`: a single vertical segment at the start point's x
+///   coordinate. `shift` offsets the line horizontally.
+/// - `"north"`, `"south"`, `"east"`, `"west"`: a 3-segment orthogonal route.
+///   The middle segment runs perpendicular to the named direction (horizontal
+///   for north/south, vertical for east/west). `bend` controls how far the
+///   route bends before turning; defaults to half the span between the
+///   endpoints. `shift` offsets each endpoint along the middle segment
+///   direction and may be a single value or a `(shift-a, shift-b)` array for
+///   independent per-endpoint control.
+///
+/// - `label` (`content` or `none`) -- Label to render alongside the edge.
+///   Defaults to `none`.
+/// - `label-pos` (`ratio` or `array`) -- Position of the label along the
+///   line. Either a bare ratio (e.g. `50%`) which defaults to the `"north"`
+///   side, or a two-element array `(ratio, side)` where `side` is one of
+///   `"north"`, `"south"`, `"east"`, `"west"`. Defaults to `(50%, "north")`.
+/// - `label-dist` (`length`) -- Perpendicular distance between the line and
+///   the label. Defaults to `0`.
+/// - `label-align` (`alignment`) -- Typst alignment applied to the label
+///   content. Defaults to `center`.
+/// - `label-angle` (`angle`) -- Rotation applied to the label content.
+///   Defaults to `0deg`.
+/// - `label-inset` (`length`) -- Inset applied around the label content box.
+///   Defaults to `0.3em`.
+/// - `routing` (`none` or `string`) -- Routing strategy. One of `none`,
+///   `"horizontal"`, `"vertical"`, `"north"`, `"south"`, `"east"`, `"west"`.
+///   Defaults to `none`.
+/// - `bend` (`auto` or `length`) -- Bend distance for 3-segment routing.
+///   Must be non-zero when supplied explicitly. Defaults to `auto`.
+/// - `shift` (`length` or `array`) -- Shift applied to the endpoints. For
+///   3-segment routing this may be `(shift-a, shift-b)`. Defaults to `0`.
+/// - `..args` -- Remaining positional arguments are the line's coordinate
+///   points; named arguments are forwarded as CeTZ `line` style options
+///   (e.g. `name`, `stroke`, `mark`, …).
 #let edge(
   label: none,
   label-pos: (50%, "north"),
