@@ -3,7 +3,7 @@
 // When width or height is given as a ratio (e.g. 80%), it is resolved relative
 // to the container's measured size.
 #import "@preview/cetz:0.4.2"
-#import "/lib/nodes.typ": node
+#import "/src/nodes.typ": node
 
 #set page(width: 8cm, height: 8cm, margin: 5pt)
 

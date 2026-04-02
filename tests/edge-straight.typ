@@ -1,6 +1,6 @@
 // Test: straight edges (no routing) between nodes
 #import "@preview/cetz:0.4.2"
-#import "/lib/nodes.typ": node, edge
+#import "/src/nodes.typ": node, edge
 
 #set page(width: 8cm, height: 4cm, margin: 5pt)
 

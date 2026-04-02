@@ -1,6 +1,6 @@
 // Test: node placed with "between" positioning
 #import "@preview/cetz:0.4.2"
-#import "/lib/nodes.typ": node
+#import "/src/nodes.typ": node
 
 #set page(width: 8cm, height: 4cm, margin: 5pt)
 

@@ -1,7 +1,7 @@
 // Test: edge label on all four sides (north, south, east, west)
 // and with label-pos as a bare ratio (defaults to "north" side).
 #import "@preview/cetz:0.4.2"
-#import "/lib/nodes.typ": node, edge
+#import "/src/nodes.typ": node, edge
 
 #set page(width: 10cm, height: 10cm, margin: 5pt)
 

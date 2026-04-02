@@ -1,6 +1,6 @@
 // Test: basic node at an absolute coordinate
 #import "@preview/cetz:0.4.2"
-#import "/lib/nodes.typ": node
+#import "/src/nodes.typ": node
 
 #set page(width: 6cm, height: 4cm, margin: 5pt)
 

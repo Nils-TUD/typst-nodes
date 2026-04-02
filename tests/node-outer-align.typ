@@ -8,7 +8,7 @@
 //   top    → new node's top edge aligns with reference's top edge
 //   bottom → new node's bottom edge aligns with reference's bottom edge
 #import "@preview/cetz:0.4.2"
-#import "/lib/nodes.typ": node
+#import "/src/nodes.typ": node
 
 #set page(width: 10cm, height: 10cm, margin: 5pt)
 

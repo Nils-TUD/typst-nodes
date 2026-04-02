@@ -3,7 +3,7 @@
 // shift can be a single value (same for both endpoints) or an array
 // (shift-a, shift-b) to move each endpoint independently.
 #import "@preview/cetz:0.4.2"
-#import "/lib/nodes.typ": node, edge
+#import "/src/nodes.typ": node, edge
 
 #set page(width: 12cm, height: 9cm, margin: 5pt)
 

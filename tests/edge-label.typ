@@ -1,6 +1,6 @@
 // Test: edges with labels (label, label-pos, label-dist, label-side, label-angle)
 #import "@preview/cetz:0.4.2"
-#import "/lib/nodes.typ": node, edge
+#import "/src/nodes.typ": node, edge
 
 #set page(width: 12cm, height: 8cm, margin: 5pt)
 
