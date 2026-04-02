@@ -1,0 +1,128 @@
+# typst-nodes
+
+A [CeTZ](https://github.com/cetz-package/cetz)-based library for drawing labeled rectangular nodes and routed edges — the building blocks for block diagrams, flowcharts, and architecture drawings in [Typst](https://typst.app).
+
+Instead of placing boxes by hand with raw coordinates, `typst-nodes` lets you describe layout relationally: put this node *north of* that one, *inside* a container, or *between* two others. Edges between nodes support straight lines and several orthogonal routing strategies, with optional labels.
+
+## Usage
+
+### Nodes
+
+`node(origin, body, ..style)` draws a labeled rectangle on the canvas.
+
+#### Absolute placement
+
+```typst
+#cetz.canvas({
+  node((0, 0), [Hello], name: "a")
+  node((3, 0), [World], name: "b", fill: silver)
+})
+```
+
+#### Relative placement — adjacent to another node
+
+Use `north-of`, `south-of`, `east-of`, `west-of` (and diagonal variants) to place a node next to an existing one. The value can be a name string, a `(name, gap)` pair, or a `(name, gap, align)` triple:
+
+```typst
+#cetz.canvas({
+  node((0, 0),                  [Start],  name: "s")
+  node((east-of:  ("s", .4cm)), [Right],  name: "r")
+  node((north-of: ("s", .4cm)), [Top],    name: "t")
+  // Align the new node's left border with "s"'s left border:
+  node((north-of: ("s", .4cm, "left")), [Top-left])
+})
+```
+
+#### Relative placement — inside a container
+
+Use `in-north`, `in-south`, `in-east`, `in-west` (and corner variants) to pin a child node to an inner edge of a parent. Width and height may be given as ratios relative to the container:
+
+```typst
+#cetz.canvas({
+  node((0, 0), [], name: "box", width: 5cm, height: 5cm)
+  node((in-north:      ("box", .1cm)), [N],  fill: silver, width: 1.2cm, height: .6cm)
+  node((in-south-west: ("box", .1cm)), [SW], fill: silver, width: 40%,   height: 20%)
+})
+```
+
+#### Placement between two nodes
+
+```typst
+#cetz.canvas({
+  node((-2.5, 0), [Left],  name: "l")
+  node(( 2.5, 0), [Right], name: "r")
+  node((between: ("l", "r")), [Mid], width: 1.5cm, height: .8cm, fill: silver)
+})
+```
+
+### Edges
+
+`edge(..points, ..style)` draws a line between two coordinates or named node anchors.
+
+#### Straight edge
+
+```typst
+#cetz.canvas({
+  node((-2.5, 0), [A], name: "a")
+  node(( 2.5, 0), [B], name: "b")
+  node(( 0,  -2), [C], name: "c")
+
+  edge("a.east",  "b.west",  mark: (end: ">"))
+  edge("a.south", "c.north", mark: (end: ">"), stroke: blue)
+  edge("b.south", "c.north", mark: (end: ">"), stroke: red)
+})
+```
+
+#### Horizontal / vertical single-segment routing
+
+```typst
+edge("a.north-east", "b.west",  routing: "horizontal", mark: (end: ">"))
+edge("c.north",      "a.south", routing: "vertical",   mark: (end: ">"), stroke: red)
+```
+
+`shift` offsets the line perpendicular to its direction (useful for parallel edges):
+
+```typst
+edge("a.north-east", "b.west", routing: "horizontal", shift: -.3cm, stroke: blue, mark: (end: ">"))
+```
+
+#### 3-segment orthogonal routing
+
+Routes the edge out in a given direction, runs a horizontal or vertical middle segment, then turns back to the destination. `bend` controls how far the route extends before turning (defaults to half the span between endpoints):
+
+```typst
+edge("a.south", "b.south", routing: "south", bend: .5, mark: (end: ">"))
+edge("a.east",  "c.east",  routing: "east",  bend: .8, mark: (end: ">"), stroke: red)
+```
+
+`shift` offsets each endpoint along the middle segment. Pass an array for independent per-endpoint control:
+
+```typst
+edge("a.south", "b.south", routing: "south", shift: (-.2, .2), mark: (end: ">"))
+```
+
+#### Edge labels
+
+```typst
+// Label at 50% along the edge, on the north side (default)
+edge("a.east", "b.west", label: [A to B], mark: (end: ">"))
+
+// Label at 25%, south side, with extra distance from the line
+edge("c.east", "d.west",
+  label: [25% south],
+  label-pos: (25%, "south"),
+  label-dist: .2cm,
+  mark: (end: ">"),
+)
+```
+
+## Running the tests
+
+The test suite compiles each `.typ` file in `tests/` and compares the output PNG against a reference in `tests/ref/`. It requires Python 3, [Pillow](https://python-pillow.org/), and the `typst` CLI.
+
+```sh
+pip install Pillow
+python3 tests/run_tests.py                           # run all tests
+python3 tests/run_tests.py node-basic edge-straight  # run specific tests
+python3 tests/run_tests.py --update                  # regenerate reference images
+```
