@@ -1,0 +1,21 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Typst
+        uses: typst-community/setup-typst@v4
+
+      - name: Install Python dependencies
+        run: pip install Pillow
+
+      - name: Run tests
+        run: python3 tests/run_tests.py
