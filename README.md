@@ -4,6 +4,15 @@ A [CeTZ](https://github.com/cetz-package/cetz)-based library for drawing labeled
 
 Instead of placing boxes by hand with raw coordinates, `typst-nodes` lets you describe layout relationally: put this node *north of* that one, *inside* a container, or *between* two others. Edges between nodes support straight lines and several orthogonal routing strategies, with optional labels.
 
+## Examples
+
+<table>
+<tr>
+<td align="center"><a href="examples/microkernel.typ"><img src="examples/microkernel.png" alt="Microkernel diagram"/></a></td>
+<td align="center"><a href="examples/l4re.typ"><img src="examples/l4re.png" alt="L4Re diagram"/></a></td>
+</tr>
+</table>
+
 ## Usage
 
 ### Nodes
