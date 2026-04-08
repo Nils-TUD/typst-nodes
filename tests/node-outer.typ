@@ -8,10 +8,10 @@
 #cetz.canvas({
   node((0, 0), [Center], name: "c", stroke: black)
 
-  node((east-of:  ("c", .4cm)), [E],  name: "e",  stroke: black, fill: silver)
-  node((west-of:  ("c", .4cm)), [W],  name: "w",  stroke: black, fill: silver)
-  node((north-of: ("c", .4cm)), [N],  name: "n",  stroke: black, fill: silver)
-  node((south-of: ("c", .4cm)), [S],  name: "s",  stroke: black, fill: silver)
+  node((east-of: ("c", .4cm)), [E], name: "e", stroke: black, fill: silver)
+  node((west-of: ("c", .4cm)), [W], name: "w", stroke: black, fill: silver)
+  node((north-of: ("c", .4cm)), [N], name: "n", stroke: black, fill: silver)
+  node((south-of: ("c", .4cm)), [S], name: "s", stroke: black, fill: silver)
 
   node((north-east-of: ("c", .4cm)), [NE], name: "ne", stroke: black, fill: luma(200))
   node((north-west-of: ("c", .4cm)), [NW], name: "nw", stroke: black, fill: luma(200))

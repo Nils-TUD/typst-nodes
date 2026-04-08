@@ -1,5 +1,5 @@
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": node, edge
+#import "/src/nodes.typ": edge, node
 
 #set page(width: 16cm, height: 12cm)
 #set text(font: "Noto Sans", size: 1.5em)
@@ -22,7 +22,7 @@
   text(size: .8em)[#lbl],
   inset: .4cm,
   radius: 2pt,
-  ..args
+  ..args,
 )
 
 #let app(pos, lbl, ..args) = block(pos, lbl, fill: colors.at(0), height: 1.1cm, ..args)
@@ -56,7 +56,7 @@
     stroke: color,
   )
   node((east-of: (kernel, gap)), text(fill: color)[kernel], body-angle: 90deg, stroke: 0pt)
-  node((east-of: (layer,  gap)), text(fill: color)[user],   body-angle: 90deg, stroke: 0pt)
+  node((east-of: (layer, gap)), text(fill: color)[user], body-angle: 90deg, stroke: 0pt)
 }
 
 #cetz.canvas({
@@ -66,20 +66,21 @@
     [Fiasco.OC Microkernel],
     body-pos: "north",
     fill: colors.at(1),
-    width: total-w, height: 3cm,
-    name: "kernel"
+    width: total-w,
+    height: 3cm,
+    name: "kernel",
   )
 
-  kobj((in-south-west: ("kernel", gap)), [Task],   name: "task")
-  kobj((east-of: ("task",   gap)),       [Thread], name: "thread")
-  kobj((east-of: ("thread", gap)),       [IPC],    name: "ipc")
-  kobj((east-of: ("ipc",    gap)),       [IRQ],    name: "irq")
-  kobj((in-south-east: ("kernel", gap)), [Sched],  name: "sched")
+  kobj((in-south-west: ("kernel", gap)), [Task], name: "task")
+  kobj((east-of: ("task", gap)), [Thread], name: "thread")
+  kobj((east-of: ("thread", gap)), [IPC], name: "ipc")
+  kobj((east-of: ("ipc", gap)), [IRQ], name: "irq")
+  kobj((in-south-east: ("kernel", gap)), [Sched], name: "sched")
 
-  serv((north-of: ("kernel", big-gap * 2)), [L4Re],    width: total-w, name: "l4re")
-  serv((north-of: ("l4re", gap, "left")),   [L4Linux], name: "l4linux")
-  serv((east-of: ("l4linux", gap)),         [Dope],    name: "dope")
-  serv((east-of: ("dope",    gap)),         [VPFS],    name: "vpfs")
+  serv((north-of: ("kernel", big-gap * 2)), [L4Re], width: total-w, name: "l4re")
+  serv((north-of: ("l4re", gap, "left")), [L4Linux], name: "l4linux")
+  serv((east-of: ("l4linux", gap)), [Dope], name: "dope")
+  serv((east-of: ("dope", gap)), [VPFS], name: "vpfs")
 
   app(
     (north-of: ("l4linux", gap)),

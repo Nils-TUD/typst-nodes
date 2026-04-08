@@ -22,9 +22,8 @@
           calc.max(max-pt.at(2), pt.at(2)),
         )
       }
-    }
-    else if drawable.type == "content" {
-      let (x, y, _, w, h,) = drawable.pos + (drawable.width, drawable.height)
+    } else if drawable.type == "content" {
+      let (x, y, _, w, h) = drawable.pos + (drawable.width, drawable.height)
       let corners = (
         (x + w / 2, y - h / 2, 0.0),
         (x - w / 2, y + h / 2, 0.0),
@@ -66,31 +65,25 @@
       let off = width / 2 - el-size.at(0) / 2
       if align == "left" {
         align-offset = (off, 0, 0)
-      }
-      else if align == "right" {
+      } else if align == "right" {
         align-offset = (-off, 0, 0)
       }
-    }
-    else {
+    } else {
       let off = height / 2 - el-size.at(1) / 2
       if align == "bottom" {
         align-offset = (0, off, 0)
-      }
-      else if align == "top" {
+      } else if align == "top" {
         align-offset = (0, -off, 0)
       }
     }
   }
 
   // determine normal vector for given edge/corner
-  let normal = if edge == "north" { (0, 1, 0) }
-  else if edge == "south" { (0, -1, 0) }
-  else if edge == "east" { (1, 0, 0) }
-  else if edge == "west" { (-1, 0, 0) }
-  else if edge == "north-east" { (1, 1, 0) }
-  else if edge == "north-west" { (-1, 1, 0) }
-  else if edge == "south-east" { (1, -1, 0) }
-  else if edge == "south-west" { (-1, -1, 0) }
+  let normal = if edge == "north" { (0, 1, 0) } else if edge == "south" { (0, -1, 0) } else if edge == "east" {
+    (1, 0, 0)
+  } else if edge == "west" { (-1, 0, 0) } else if edge == "north-east" { (1, 1, 0) } else if edge == "north-west" {
+    (-1, 1, 0)
+  } else if edge == "south-east" { (1, -1, 0) } else if edge == "south-west" { (-1, -1, 0) }
 
   // Adjust origin by half the new rectangle's size to align edges
   let nx = normal.at(0)
@@ -99,11 +92,9 @@
   let shift = if edge.contains("-") { dist } else { dist + halfproj }
 
   // determine adjustment to center anchor
-  let (ax, ay) = if edge == "south-west" { (-width, -height) }
-  else if edge == "south-east" { (0, -height) }
-  else if edge == "north-west" { (-width, 0) }
-  else if edge == "north-east" { (0, 0) }
-  else { (-width / 2, -height/ 2) }
+  let (ax, ay) = if edge == "south-west" { (-width, -height) } else if edge == "south-east" { (0, -height) } else if (
+    edge == "north-west"
+  ) { (-width, 0) } else if edge == "north-east" { (0, 0) } else { (-width / 2, -height / 2) }
 
   let offset = cetz.vector.add(
     cetz.vector.add(
@@ -118,27 +109,23 @@
 #let _resolve-inner(pos, el, dist, width, height) = {
   let y-start = if pos.starts-with("in-north") {
     -height - dist
-  }
-  else if pos.starts-with("in-south") {
+  } else if pos.starts-with("in-south") {
     dist
-  }
-  else {
+  } else {
     -height / 2
   }
 
   let x-start = if pos.ends-with("west") {
     dist
-  }
-  else if pos.ends-with("east") {
+  } else if pos.ends-with("east") {
     -width - dist
-  }
-  else {
+  } else {
     -width / 2
   }
 
   (
     (rel: (x-start, y-start), to: el + "." + pos.slice(3)),
-    (rel: (width, height))
+    (rel: (width, height)),
   )
 }
 
@@ -203,9 +190,9 @@
   width: auto,
   height: auto,
   inset: .3em,
-  ..style
+  ..style,
 ) = {
-  cetz.draw.get-ctx((ctx) => {
+  cetz.draw.get-ctx(ctx => {
     let body = box(inset: inset, rotate(body-angle)[#body])
 
     // determine content width and height
@@ -224,19 +211,30 @@
         if width == auto { cw } else { width },
         if height == auto { ch } else { height },
       )
-    }
-    else {
+    } else {
       (width, height)
     }
 
     // determine location and size
     let outer = (
-      "east-of", "west-of", "north-of", "south-of",
-      "north-east-of", "north-west-of", "south-east-of", "south-west-of",
+      "east-of",
+      "west-of",
+      "north-of",
+      "south-of",
+      "north-east-of",
+      "north-west-of",
+      "south-east-of",
+      "south-west-of",
     )
     let inner = (
-      "in-north", "in-south", "in-west", "in-east",
-      "in-north-west", "in-north-east", "in-south-west", "in-south-east"
+      "in-north",
+      "in-south",
+      "in-west",
+      "in-east",
+      "in-north-west",
+      "in-north-east",
+      "in-south-west",
+      "in-south-east",
     )
     let (anchor, loc, size) = if type(origin) == dictionary {
       let (dir, spec) = origin.pairs().first()
@@ -249,18 +247,15 @@
         let mid = _resolve-between(ctx, el-a, el-b)
         let loc = cetz.vector.add(mid, (-width / 2, -height / 2, 0))
         ("center", loc, (rel: (width, height)))
-      }
-      else {
+      } else {
         let (el, dist, align) = if type(spec) == array {
           if spec.len() == 2 {
             let (el, dist) = spec
             (el, dist, "center")
-          }
-          else {
+          } else {
             spec
           }
-        }
-        else {
+        } else {
           (spec, 0, "center")
         }
         let dist = cetz.util.resolve-number(ctx, dist)
@@ -273,18 +268,16 @@
           (
             "center",
             _resolve-outer(ctx, dir, el, dist, align, width, height),
-            (rel: (width, height))
+            (rel: (width, height)),
           )
-        }
-        else if dir in inner {
+        } else if dir in inner {
           // resolve ratios to container-relative sizes
           let (width, height) = if type(width) == ratio or type(height) == ratio {
             let con-size = _get-element-size(ctx, el)
             let width = if type(width) == ratio { float(width * con-size.at(0)) } else { width }
             let height = if type(height) == ratio { float(height * con-size.at(1)) } else { height }
             (width, height)
-          }
-          else {
+          } else {
             (width, height)
           }
 
@@ -294,13 +287,11 @@
 
           let (loc, size) = _resolve-inner(dir, el, dist, width, height)
           ("center", loc, size)
-        }
-        else {
+        } else {
           (style.at("anchor", default: "center"), origin, (rel: (width, height)))
         }
       }
-    }
-    else {
+    } else {
       (style.at("anchor", default: "center"), origin, (rel: (width, height)))
     }
 
@@ -310,23 +301,19 @@
       size,
       anchor: anchor,
       name: name,
-      ..style
+      ..style,
     )
 
     let body-anc = name + "." + body-pos
     let (pos, anc) = if body-pos == "north" {
       ((rel: (0, -body-dist), to: body-anc), "north")
-    }
-    else if body-pos == "south" {
+    } else if body-pos == "south" {
       ((rel: (0, body-dist), to: body-anc), "south")
-    }
-    else if body-pos == "west" {
+    } else if body-pos == "west" {
       ((rel: (body-dist, 0), to: body-anc), "west")
-    }
-    else if body-pos == "east" {
+    } else if body-pos == "east" {
       ((rel: (-body-dist, 0), to: body-anc), "east")
-    }
-    else {
+    } else {
       (name, "center")
     }
     cetz.draw.content(pos, anchor: anc, align(body-align)[#body])
@@ -349,7 +336,7 @@
     (label-pos, "north")
   }
 
-  cetz.draw.get-ctx((ctx) => {
+  cetz.draw.get-ctx(ctx => {
     let label-content = box(inset: label-inset, rotate(label-angle)[#label])
 
     // Resolve the position along the line path
@@ -468,7 +455,7 @@
     assert(points.len() == 2, message: "horizontal/vertical routing requires exactly 2 points")
     let (pt-start, pt-end) = (points.at(0), points.at(1))
 
-    cetz.draw.get-ctx((ctx) => {
+    cetz.draw.get-ctx(ctx => {
       let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
       let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
       let s = cetz.util.resolve-number(ctx, shift)
@@ -486,7 +473,8 @@
       }
 
       cetz.draw.line(
-        a-shifted, target,
+        a-shifted,
+        target,
         name: line-name,
         ..style,
       )
@@ -507,14 +495,13 @@
     // (shift-a, shift-b) for independent per-endpoint control.
     let (pt-start, pt-end) = (points.at(0), points.at(1))
 
-    cetz.draw.get-ctx((ctx) => {
+    cetz.draw.get-ctx(ctx => {
       let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
       let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
 
       // Resolve shift into two scalar values
       let (sa, sb) = if type(shift) == array {
-        (cetz.util.resolve-number(ctx, shift.at(0)),
-         cetz.util.resolve-number(ctx, shift.at(1)))
+        (cetz.util.resolve-number(ctx, shift.at(0)), cetz.util.resolve-number(ctx, shift.at(1)))
       } else {
         let s = cetz.util.resolve-number(ctx, shift)
         (s, s)
@@ -533,17 +520,25 @@
         if routing == "south" or routing == "north" {
           let span = calc.abs(b.at(0) - a.at(0))
           if span < _eps {
-            panic("edge: routing \"" + routing + "\" requires the two endpoints " +
-              "to differ in X, but both have the same X coordinate. " +
-              "Either use a different routing direction or supply an explicit bend value.")
+            panic(
+              "edge: routing \""
+                + routing
+                + "\" requires the two endpoints "
+                + "to differ in X, but both have the same X coordinate. "
+                + "Either use a different routing direction or supply an explicit bend value.",
+            )
           }
           span / 2
         } else {
           let span = calc.abs(b.at(1) - a.at(1))
           if span < _eps {
-            panic("edge: routing \"" + routing + "\" requires the two endpoints " +
-              "to differ in Y, but both have the same Y coordinate. " +
-              "Either use a different routing direction or supply an explicit bend value.")
+            panic(
+              "edge: routing \""
+                + routing
+                + "\" requires the two endpoints "
+                + "to differ in Y, but both have the same Y coordinate. "
+                + "Either use a different routing direction or supply an explicit bend value.",
+            )
           }
           span / 2
         }
@@ -596,7 +591,10 @@
 
       // Draw the full 3-segment line
       cetz.draw.line(
-        a-shifted, p1, p2, b-shifted,
+        a-shifted,
+        p1,
+        p2,
+        b-shifted,
         name: line-name,
         ..style,
       )

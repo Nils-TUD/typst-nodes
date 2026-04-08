@@ -10,10 +10,10 @@
   node((0, 0), [], name: "p", width: 5cm, height: 5cm, stroke: black)
 
   // Children pinned to inner edges
-  node((in-north:      ("p", .1cm)), [N],  name: "n",  fill: silver, width: 1.2cm, height: .6cm)
-  node((in-south:      ("p", .1cm)), [S],  name: "s",  fill: silver, width: 1.2cm, height: .6cm)
-  node((in-west:       ("p", .1cm)), [W],  name: "w",  fill: silver, width: .6cm,  height: 1.2cm)
-  node((in-east:       ("p", .1cm)), [E],  name: "e",  fill: silver, width: .6cm,  height: 1.2cm)
+  node((in-north: ("p", .1cm)), [N], name: "n", fill: silver, width: 1.2cm, height: .6cm)
+  node((in-south: ("p", .1cm)), [S], name: "s", fill: silver, width: 1.2cm, height: .6cm)
+  node((in-west: ("p", .1cm)), [W], name: "w", fill: silver, width: .6cm, height: 1.2cm)
+  node((in-east: ("p", .1cm)), [E], name: "e", fill: silver, width: .6cm, height: 1.2cm)
   node((in-north-west: ("p", .1cm)), [NW], name: "nw", fill: luma(200), width: 1cm, height: .6cm)
   node((in-north-east: ("p", .1cm)), [NE], name: "ne", fill: luma(200), width: 1cm, height: .6cm)
   node((in-south-west: ("p", .1cm)), [SW], name: "sw", fill: luma(200), width: 1cm, height: .6cm)

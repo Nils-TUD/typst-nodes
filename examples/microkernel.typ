@@ -1,5 +1,5 @@
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": node, edge
+#import "/src/nodes.typ": edge, node
 
 #set page(width: 10cm, height: 7cm)
 #set text(font: "Noto Sans", size: 1.5em)
@@ -19,11 +19,12 @@
   text(size: .8em)[#lbl],
   inset: .4cm,
   radius: 2pt,
-  ..args
+  ..args,
 )
 
 #let serv(pos, lbl, ..args) = block(
-  pos, lbl,
+  pos,
+  lbl,
   fill: colors.at(2),
   width: 3.8cm,
   height: gap * 2,
@@ -47,16 +48,16 @@
     [Microkernel],
     fill: colors.at(1),
     width: 8cm,
-    name: "kernel"
+    name: "kernel",
   )
-  serv((north-of: ("kernel", gap * 3, "left")),  [Network], name: "net")
-  serv((north-of: ("kernel", gap * 3, "right")), [Driver],  name: "drv")
+  serv((north-of: ("kernel", gap * 3, "left")), [Network], name: "net")
+  serv((north-of: ("kernel", gap * 3, "right")), [Driver], name: "drv")
 
   for (node, side, shift, no) in (
     ("net", "west", -.5, [1]),
-    ("drv", "east",  .5, [2]),
+    ("drv", "east", .5, [2]),
     ("drv", "west", -.5, [3]),
-    ("net", "east",  .5, [4]),
+    ("net", "east", .5, [4]),
   ) {
     let reverse = side == "east"
     edge(
