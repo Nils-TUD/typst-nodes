@@ -313,6 +313,14 @@
       ((rel: (body-dist, 0), to: body-anc), "west")
     } else if body-pos == "east" {
       ((rel: (-body-dist, 0), to: body-anc), "east")
+    } else if body-pos == "north-west" {
+      ((rel: (body-dist, -body-dist), to: body-anc), "north-west")
+    } else if body-pos == "north-east" {
+      ((rel: (-body-dist, -body-dist), to: body-anc), "north-east")
+    } else if body-pos == "south-west" {
+      ((rel: (body-dist, body-dist), to: body-anc), "south-west")
+    } else if body-pos == "south-east" {
+      ((rel: (-body-dist, body-dist), to: body-anc), "south-east")
     } else {
       (name, "center")
     }
