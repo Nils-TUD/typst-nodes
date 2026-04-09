@@ -18,4 +18,5 @@
   node((in-north-east: ("p", .1cm)), [NE], name: "ne", fill: luma(200), width: 1cm, height: .6cm)
   node((in-south-west: ("p", .1cm)), [SW], name: "sw", fill: luma(200), width: 1cm, height: .6cm)
   node((in-south-east: ("p", .1cm)), [SE], name: "se", fill: luma(200), width: 1cm, height: .6cm)
+  node((in-center: "p"), [C], name: "c", fill: luma(180), width: 30%, height: .6cm)
 })

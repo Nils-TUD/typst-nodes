@@ -152,11 +152,12 @@
 ///     element is placed north of the `name` and its left border is aligned the
 ///     left border of `name`.
 ///   - `"in-north"`, `"in-south"`, `"in-east"`, `"in-west"`,
-///     `"in-north-east"`, `"in-north-west"`, `"in-south-east"`, `"in-south-west"`:
+///     `"in-north-east"`, `"in-north-west"`, `"in-south-east"`, `"in-south-west"`,
+///     `"in-center"`:
 ///     places the node *inside* an existing named element, anchored to the
-///     given inner edge/corner. The value follows the same conventions as the
-///     outer-placement keys above. `width` and `height` may be given as ratios
-///     (e.g. `50%`) to size the child relative to the container.
+///     given inner edge/corner/centre. The value follows the same conventions
+///     as the outer-placement keys above. `width` and `height` may be given as
+///     ratios (e.g. `50%`) to size the child relative to the container.
 ///   - `"between"`: centres the node between two existing elements. The value
 ///     must be a two-element array `(el-a, el-b)`.
 ///
@@ -235,6 +236,7 @@
       "in-north-east",
       "in-south-west",
       "in-south-east",
+      "in-center",
     )
     let (anchor, loc, size) = if type(origin) == dictionary {
       let (dir, spec) = origin.pairs().first()
