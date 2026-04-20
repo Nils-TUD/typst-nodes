@@ -1,10 +1,10 @@
 // Test: edges with horizontal/vertical routing and shift
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": edge, node
+#import "/src/nodes.typ": canvas, edge, node
 
 #set page(width: 8cm, height: 8cm, margin: 5pt)
 
-#cetz.canvas({
+#canvas({
   node((-2.5, 1.5), [A], name: "a", width: 2cm, height: 2cm, stroke: black)
   node((2.5, 0), [B], name: "b", width: 2cm, height: 2cm, stroke: black)
   node((-1, -2), [C], name: "c", width: 2cm, height: 2cm, stroke: black, fill: silver)

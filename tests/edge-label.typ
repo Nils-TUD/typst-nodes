@@ -1,10 +1,10 @@
 // Test: edges with labels (label, label-pos, label-dist, label-side, label-angle)
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": edge, node
+#import "/src/nodes.typ": canvas, edge, node
 
 #set page(width: 12cm, height: 8cm, margin: 5pt)
 
-#cetz.canvas({
+#canvas({
   node((-3, 2), [A], name: "a", stroke: black)
   node((3, 2), [B], name: "b", stroke: black)
   node((-3, -2), [C], name: "c", stroke: black)

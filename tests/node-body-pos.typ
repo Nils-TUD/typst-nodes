@@ -4,11 +4,11 @@
 // (instead of centered), offset outward by body-dist.
 // Also tests body-align (left/center/right alignment of the label text).
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": node
+#import "/src/nodes.typ": canvas, node
 
 #set page(width: 10cm, height: 10cm, margin: 5pt)
 
-#cetz.canvas({
+#canvas({
   // body-pos: "north" — label anchored to top edge, pushed inward by body-dist
   node(
     (-3, 2),

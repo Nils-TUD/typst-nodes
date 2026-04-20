@@ -1,5 +1,5 @@
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": edge, node
+#import "/src/nodes.typ": canvas, edge, node
 
 #set page(width: 10cm, height: 7cm)
 #set text(font: "Noto Sans", size: 1.5em)
@@ -41,7 +41,7 @@
   text(size: .8em)[#no],
 )
 
-#cetz.canvas({
+#canvas({
   block((0, 0), [Hardware], fill: colors.at(4), width: 8cm, name: "hw")
   block(
     (north-of: ("hw", gap)),

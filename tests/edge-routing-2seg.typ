@@ -1,10 +1,10 @@
 // Test: edges with 2-segment routing (2w-north, 2w-south, 2w-east, 2w-west)
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": edge, node
+#import "/src/nodes.typ": canvas, edge, node
 
 #set page(width: 10cm, height: 10cm, margin: 5pt)
 
-#cetz.canvas({
+#canvas({
   node((-3, 3), [A], width: 2cm, height: 2cm, name: "a")
   node((3, 1), [B], width: 2cm, height: 2cm, name: "b")
   node((-3, -2), [C], width: 2cm, height: 2cm, name: "c")

@@ -1,5 +1,50 @@
 #import "@preview/cetz:0.4.2"
 
+#let _outer-coords = (
+  "east-of",
+  "west-of",
+  "north-of",
+  "south-of",
+  "north-east-of",
+  "north-west-of",
+  "south-east-of",
+  "south-west-of",
+)
+
+#let _inner-coords = (
+  "in-north",
+  "in-south",
+  "in-west",
+  "in-east",
+  "in-north-west",
+  "in-north-east",
+  "in-south-west",
+  "in-south-east",
+  "in-center",
+)
+
+#let _nodes-canvas-key = "__nodes_canvas__"
+
+#let _parse-placement-spec(spec) = {
+  if type(spec) == array {
+    if spec.len() == 2 {
+      let (el, dist) = spec
+      (el, dist, "center")
+    } else {
+      spec
+    }
+  } else {
+    (spec, 0, "center")
+  }
+}
+
+#let _assert-nodes-canvas(ctx) = {
+  assert(
+    ctx.shared-state.at(_nodes-canvas-key, default: false),
+    message: "nodes.node and nodes.edge must be used inside nodes.canvas(...)",
+  )
+}
+
 #let _get-element-size(ctx, name) = {
   import cetz: drawable, path-util
 
@@ -135,6 +180,56 @@
   cetz.vector.scale(cetz.vector.add(pt-a, pt-b), .5)
 }
 
+#let _resolve-node-coordinate(ctx, c) = {
+  if type(c) != dictionary or c.len() != 1 {
+    return c
+  }
+
+  let (dir, spec) = c.pairs().first()
+  if dir in _outer-coords {
+    let (el, dist, align) = _parse-placement-spec(spec)
+    let dist = cetz.util.resolve-number(ctx, dist)
+    _resolve-outer(ctx, dir, el, dist, align, 0, 0)
+  } else if dir in _inner-coords {
+    let (el, dist, _) = _parse-placement-spec(spec)
+    let dist = cetz.util.resolve-number(ctx, dist)
+    _resolve-inner(dir, el, dist, 0, 0).at(0)
+  } else if dir == "between" {
+    let (el-a, el-b) = spec
+    _resolve-between(ctx, el-a, el-b)
+  } else {
+    c
+  }
+}
+
+/// Set up a CeTZ canvas with the nodes coordinate resolver registered.
+///
+/// This mirrors `cetz.canvas(...)`, but additionally enables nested nodes
+/// coordinates such as `(rel: (1, 2), to: (east-of: "foo"))` and is required
+/// when using `node(...)` or `edge(...)`.
+#let canvas(length: 1cm, baseline: none, debug: false, background: none, stroke: none, padding: none, body) = context {
+  let init = (
+    cetz.draw.register-coordinate-resolver(_resolve-node-coordinate).first(),
+    ctx => {
+      ctx.shared-state.insert(_nodes-canvas-key, true)
+      (ctx: ctx)
+    },
+  )
+
+  cetz.canvas(
+    length: length,
+    baseline: baseline,
+    debug: debug,
+    background: background,
+    stroke: stroke,
+    padding: padding,
+    (
+      ..init,
+      ..body,
+    ),
+  )
+}
+
 /// Draw a rectangular node (box) with a label on a CeTZ canvas.
 ///
 /// The node's position and size are controlled by `origin`, which can be:
@@ -217,27 +312,7 @@
     }
 
     // determine location and size
-    let outer = (
-      "east-of",
-      "west-of",
-      "north-of",
-      "south-of",
-      "north-east-of",
-      "north-west-of",
-      "south-east-of",
-      "south-west-of",
-    )
-    let inner = (
-      "in-north",
-      "in-south",
-      "in-west",
-      "in-east",
-      "in-north-west",
-      "in-north-east",
-      "in-south-west",
-      "in-south-east",
-      "in-center",
-    )
+    _assert-nodes-canvas(ctx)
     let (anchor, loc, size) = if type(origin) == dictionary {
       let (dir, spec) = origin.pairs().first()
 
@@ -262,7 +337,7 @@
         }
         let dist = cetz.util.resolve-number(ctx, dist)
 
-        if dir in outer {
+         if dir in _outer-coords {
           // make size absolute
           let width = cetz.util.resolve-number(ctx, width)
           let height = cetz.util.resolve-number(ctx, height)
@@ -272,7 +347,7 @@
             _resolve-outer(ctx, dir, el, dist, align, width, height),
             (rel: (width, height)),
           )
-        } else if dir in inner {
+         } else if dir in _inner-coords {
           // resolve ratios to container-relative sizes
           let (width, height) = if type(width) == ratio or type(height) == ratio {
             let con-size = _get-element-size(ctx, el)
@@ -453,6 +528,8 @@
   if "name" in style {
     let _ = style.remove("name")
   }
+
+  cetz.draw.get-ctx(ctx => _assert-nodes-canvas(ctx))
 
   let routing-kind = if routing != none and type(routing) == str and routing.starts-with("2w-") {
     "2w"

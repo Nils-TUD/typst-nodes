@@ -4,7 +4,7 @@
 // "south-east" to anchor the label at a corner of the node, offset inward
 // diagonally by body-dist along both axes.
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": node
+#import "/src/nodes.typ": canvas, node
 
 #set page(width: 10cm, height: 8cm, margin: 5pt)
 
@@ -44,7 +44,7 @@
   height: 2cm,
 )
 
-#cetz.canvas({
+#canvas({
   // Four separate nodes, one per corner
   corner-node((-3, 2), [NW label], name: "bnw", corner: "north-west")
   corner-node((3, 2), [NE label], name: "bne", corner: "north-east")

@@ -3,11 +3,11 @@
 // By default bend is auto (half the span). Here we test an explicit bend
 // value both smaller and larger than the default.
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": edge, node
+#import "/src/nodes.typ": canvas, edge, node
 
 #set page(width: 10cm, height: 11cm, margin: 5pt)
 
-#cetz.canvas({
+#canvas({
   node((-3, 3.5), [A1], name: "a1", stroke: black)
   node((3, 3.5), [B1], name: "b1", stroke: black)
   node((-3, 1.5), [A2], name: "a2", stroke: black)

@@ -22,7 +22,7 @@ Instead of placing boxes by hand with raw coordinates, `typst-nodes` lets you de
 #### Absolute placement
 
 ```typst
-#cetz.canvas({
+#canvas({
   node((0, 0), [Hello], name: "a")
   node((3, 0), [World], name: "b", fill: silver)
 })
@@ -33,7 +33,7 @@ Instead of placing boxes by hand with raw coordinates, `typst-nodes` lets you de
 Use `north-of`, `south-of`, `east-of`, `west-of` (and diagonal variants) to place a node next to an existing one. The value can be a name string, a `(name, gap)` pair, or a `(name, gap, align)` triple:
 
 ```typst
-#cetz.canvas({
+#canvas({
   node((0, 0),                  [Start],  name: "s")
   node((east-of:  ("s", .4cm)), [Right],  name: "r")
   node((north-of: ("s", .4cm)), [Top],    name: "t")
@@ -47,7 +47,7 @@ Use `north-of`, `south-of`, `east-of`, `west-of` (and diagonal variants) to plac
 Use `in-north`, `in-south`, `in-east`, `in-west` (and corner variants) to pin a child node to an inner edge of a parent. Width and height may be given as ratios relative to the container:
 
 ```typst
-#cetz.canvas({
+#canvas({
   node((0, 0), [], name: "box", width: 5cm, height: 5cm)
   node((in-north:      ("box", .1cm)), [N],  fill: silver, width: 1.2cm, height: .6cm)
   node((in-south-west: ("box", .1cm)), [SW], fill: silver, width: 40%,   height: 20%)
@@ -57,7 +57,7 @@ Use `in-north`, `in-south`, `in-east`, `in-west` (and corner variants) to pin a 
 #### Placement between two nodes
 
 ```typst
-#cetz.canvas({
+#canvas({
   node((-2.5, 0), [Left],  name: "l")
   node(( 2.5, 0), [Right], name: "r")
   node((between: ("l", "r")), [Mid], width: 1.5cm, height: .8cm, fill: silver)
@@ -67,6 +67,8 @@ Use `in-north`, `in-south`, `in-east`, `in-west` (and corner variants) to pin a 
 ### Edges
 
 `edge(..points, ..style)` draws a line between two coordinates or named node anchors.
+
+Use `canvas(...)` from this package instead of `cetz.canvas(...)` whenever you use `node(...)`, `edge(...)`, or nested nodes coordinates.
 
 #### Straight edge
 

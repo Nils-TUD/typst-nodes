@@ -1,11 +1,11 @@
 // Test: edge label on all four sides (north, south, east, west)
 // and with label-pos as a bare ratio (defaults to "north" side).
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": edge, node
+#import "/src/nodes.typ": canvas, edge, node
 
 #set page(width: 10cm, height: 10cm, margin: 5pt)
 
-#cetz.canvas({
+#canvas({
   node((-3, 3), [A], name: "a", stroke: black)
   node((3, 3), [B], name: "b", stroke: black)
   node((-3, -3), [C], name: "c", stroke: black)

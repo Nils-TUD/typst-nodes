@@ -8,11 +8,11 @@
 //   top    → new node's top edge aligns with reference's top edge
 //   bottom → new node's bottom edge aligns with reference's bottom edge
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": node
+#import "/src/nodes.typ": canvas, node
 
 #set page(width: 10cm, height: 10cm, margin: 5pt)
 
-#cetz.canvas({
+#canvas({
   // --- north-of / south-of alignment ---
   // Wide reference node
   node((0, 2), [], name: "ref-ns", width: 4cm, height: .6cm, stroke: black)

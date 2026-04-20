@@ -1,11 +1,11 @@
 // Test: nodes placed with outer directional positioning
 // (east-of, west-of, north-of, south-of, and diagonal corners)
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": node
+#import "/src/nodes.typ": canvas, node
 
 #set page(width: 8cm, height: 8cm, margin: 5pt)
 
-#cetz.canvas({
+#canvas({
   node((0, 0), [Center], name: "c", stroke: black)
 
   node((east-of: ("c", .4cm)), [E], name: "e", stroke: black, fill: silver)

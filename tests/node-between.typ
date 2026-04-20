@@ -1,10 +1,10 @@
 // Test: node placed with "between" positioning
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": node
+#import "/src/nodes.typ": canvas, node
 
 #set page(width: 8cm, height: 4cm, margin: 5pt)
 
-#cetz.canvas({
+#canvas({
   node((-2.5, 0), [Left], name: "l", stroke: black)
   node((2.5, 0), [Right], name: "r", stroke: black)
   node((north-of: ("r", 2.5)), [Top], name: "t", stroke: black)

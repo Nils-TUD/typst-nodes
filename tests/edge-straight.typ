@@ -1,10 +1,10 @@
 // Test: straight edges (no routing) between nodes
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": edge, node
+#import "/src/nodes.typ": canvas, edge, node
 
 #set page(width: 8cm, height: 4cm, margin: 5pt)
 
-#cetz.canvas({
+#canvas({
   node((-2.5, 0), [A], name: "a", stroke: black)
   node((2.5, 0), [B], name: "b", stroke: black)
   node((0, -2), [C], name: "c", stroke: black, fill: silver)

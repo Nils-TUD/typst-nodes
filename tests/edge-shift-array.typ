@@ -3,11 +3,11 @@
 // shift can be a single value (same for both endpoints) or an array
 // (shift-a, shift-b) to move each endpoint independently.
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": edge, node
+#import "/src/nodes.typ": canvas, edge, node
 
 #set page(width: 12cm, height: 9cm, margin: 5pt)
 
-#cetz.canvas({
+#canvas({
   node((-3.5, 2), [A], width: 2cm, height: 2cm, name: "a", stroke: black)
   node((3.5, 2), [B], width: 2cm, height: 2cm, name: "b", stroke: black)
   node((-3.5, -2), [C], width: 2cm, height: 2cm, name: "c", stroke: black)

@@ -3,11 +3,11 @@
 // When body-angle != 0deg the code computes the AABB of the rotated rectangle
 // to size the containing node correctly.  We test 45deg and 90deg.
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": node
+#import "/src/nodes.typ": canvas, node
 
 #set page(width: 10cm, height: 6cm, margin: 5pt)
 
-#cetz.canvas({
+#canvas({
   // 0deg baseline
   node((-4, 0), [Baseline], name: "a0", stroke: black, fill: silver, body-angle: 0deg)
 

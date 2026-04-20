@@ -4,11 +4,11 @@
 // edge and the new node's edge, for all four cardinal directions.
 // Also tests dist=0 (touching edges).
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": node
+#import "/src/nodes.typ": canvas, node
 
 #set page(width: 10cm, height: 10cm, margin: 5pt)
 
-#cetz.canvas({
+#canvas({
   node((0, 0), [Ref], name: "ref", width: 1.5cm, height: .7cm, stroke: black)
 
   // dist = 0: new node touches the reference edge
