@@ -15,6 +15,8 @@ Instead of placing boxes by hand with raw coordinates, `typst-nodes` lets you de
 
 ## Usage
 
+This package provides `canvas(...)` as a replacement for `cetz.canvas(...)` to enable the coordinate resolvers of this package. Inside the `canvas`, `node` and `edge` can be used (see below), but also all existing CeTZ primitives.
+
 ### Nodes
 
 `node(origin, body, ..style)` draws a labeled rectangle on the canvas.
@@ -68,8 +70,6 @@ Use `in-north`, `in-south`, `in-east`, `in-west` (and corner variants) to pin a 
 ### Edges
 
 `edge(..points, ..style)` draws a line between two coordinates or named node anchors.
-
-Use `canvas(...)` from this package instead of `cetz.canvas(...)` whenever you use `node(...)`, `edge(...)`, or nested nodes coordinates.
 
 #### Straight edge
 
