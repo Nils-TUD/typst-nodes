@@ -13,17 +13,17 @@
   node((-3.5, -2), [C], width: 2cm, height: 2cm, name: "c", stroke: black)
 
   // symmetric scalar shift (reference, black)
-  edge("a.north", "b.north", routing: "north", bend: 1cm, shift: 0, mark: (end: ">"))
+  edge("a.north", "b.north", routing: "3w-north", bend: 1cm, shift: 0, mark: (end: ">"))
 
   // shift as array: move A's attachment right, B's left
-  edge("a.north", "b.north", routing: "north", bend: 2cm, shift: (.4cm, -.4cm), stroke: blue, mark: (end: ">"))
+  edge("a.north", "b.north", routing: "3w-north", bend: 2cm, shift: (.4cm, -.4cm), stroke: blue, mark: (end: ">"))
 
   // shift as array: move only one end
-  edge("a.south", "b.south", routing: "south", bend: 1cm, shift: (.8cm, 0cm), stroke: red, mark: (end: ">"))
+  edge("a.south", "b.south", routing: "3w-south", bend: 1cm, shift: (.8cm, 0cm), stroke: red, mark: (end: ">"))
 
   // west routing with scalar shift
-  edge("c.west", "a.west", routing: "west", shift: 0, mark: (end: ">"))
+  edge("c.west", "a.west", routing: "3w-west", shift: 0, mark: (end: ">"))
 
   // east routing with array shift
-  edge("c.east", "a.east", routing: "east", bend: 2.5cm, shift: (.3cm, -.3cm), stroke: green, mark: (end: ">"))
+  edge("c.east", "a.east", routing: "3w-east", bend: 2.5cm, shift: (.3cm, -.3cm), stroke: green, mark: (end: ">"))
 })

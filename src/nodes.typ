@@ -387,13 +387,21 @@
 ///   coordinate. `shift` offsets the line vertically.
 /// - `"vertical"`: a single vertical segment at the start point's x
 ///   coordinate. `shift` offsets the line horizontally.
-/// - `"north"`, `"south"`, `"east"`, `"west"`: a 3-segment orthogonal route.
-///   The middle segment runs perpendicular to the named direction (horizontal
-///   for north/south, vertical for east/west). `bend` controls how far the
-///   route bends before turning; defaults to half the span between the
-///   endpoints. `shift` offsets each endpoint along the middle segment
-///   direction and may be a single value or a `(shift-a, shift-b)` array for
-///   independent per-endpoint control.
+/// - `"2w-north"`, `"2w-south"`, `"2w-east"`, `"2w-west"`: a 2-segment
+///   orthogonal route with one elbow. `2w-north`/`2w-south` go vertical first
+///   to the end point's y coordinate, then horizontal; `2w-east`/`2w-west` go
+///   horizontal first to the end point's x coordinate, then vertical. `shift`
+///   offsets the two route segments: the first value shifts the first segment,
+///   the second value shifts the second segment. For `2w-north`/`2w-south`
+///   that means `(x-shift, y-shift)`; for `2w-east`/`2w-west` it means
+///   `(y-shift, x-shift)`. A single value applies to both. `bend` is ignored.
+/// - `"3w-north"`, `"3w-south"`, `"3w-east"`, `"3w-west"`: a 3-segment
+///   orthogonal route. The middle segment runs perpendicular to the named
+///   direction (horizontal for north/south, vertical for east/west). `bend`
+///   controls how far the route bends before turning; defaults to half the
+///   span between the endpoints. `shift` offsets each endpoint along the
+///   middle segment direction and may be a single value or a `(shift-a,
+///   shift-b)` array for independent per-endpoint control.
 ///
 /// - `label` (`content` or `none`) -- Label to render alongside the edge.
 ///   Defaults to `none`.
@@ -410,12 +418,16 @@
 /// - `label-inset` (`length`) -- Inset applied around the label content box.
 ///   Defaults to `0.3em`.
 /// - `routing` (`none` or `string`) -- Routing strategy. One of `none`,
-///   `"horizontal"`, `"vertical"`, `"north"`, `"south"`, `"east"`, `"west"`.
+///   `"horizontal"`, `"vertical"`, `"2w-north"`, `"2w-south"`, `"2w-east"`,
+///   `"2w-west"`, `"3w-north"`, `"3w-south"`, `"3w-east"`, `"3w-west"`.
 ///   Defaults to `none`.
 /// - `bend` (`auto` or `length`) -- Bend distance for 3-segment routing.
 ///   Must be non-zero when supplied explicitly. Defaults to `auto`.
-/// - `shift` (`length` or `array`) -- Shift applied to the endpoints. For
-///   3-segment routing this may be `(shift-a, shift-b)`. Defaults to `0`.
+/// - `shift` (`length` or `array`) -- Shift applied to the route segments. For
+///   2-segment routing this may be a single value or `(shift-first,
+///   shift-second)`.
+///   For 3-segment routing this may also be `(shift-a, shift-b)`. Defaults
+///   to `0`.
 /// - `..args` -- Remaining positional arguments are the line's coordinate
 ///   points; named arguments are forwarded as CeTZ `line` style options
 ///   (e.g. `name`, `stroke`, `mark`, …).
@@ -441,6 +453,15 @@
   if "name" in style {
     let _ = style.remove("name")
   }
+
+  let routing-kind = if routing != none and type(routing) == str and routing.starts-with("2w-") {
+    "2w"
+  } else if routing != none and type(routing) == str and routing.starts-with("3w-") {
+    "3w"
+  } else {
+    none
+  }
+  let routing-dir = if routing-kind != none { routing.slice(3) } else { none }
 
   if routing == none {
     // --- Straight line (no routing) — shift is ignored ---
@@ -493,16 +514,68 @@
         _edge-place-label(line-name, label, label-pos, label-dist, label-align, label-angle, label-inset)
       }
     })
-  } else {
+  } else if routing-kind == "2w" {
+    // --- 2-segment routed line ---
+    assert(points.len() == 2, message: "2-way routing requires exactly 2 points")
+    let (pt-start, pt-end) = (points.at(0), points.at(1))
+
+    cetz.draw.get-ctx(ctx => {
+      let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
+      let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
+      let (s1, s2) = if type(shift) == array {
+        (cetz.util.resolve-number(ctx, shift.at(0)), cetz.util.resolve-number(ctx, shift.at(1)))
+      } else {
+        let s = cetz.util.resolve-number(ctx, shift)
+        (s, s)
+      }
+
+      let (a-shifted, b-shifted, elbow, label-start, label-end) = if routing-dir == "north" or routing-dir == "south" {
+        let ax = a.at(0) + s1
+        let bx = b.at(0)
+        let ay = a.at(1)
+        let by = b.at(1) + s2
+        let a-shifted = (ax, ay, a.at(2))
+        let elbow = (ax, by, a.at(2))
+        let b-shifted = (bx, by, b.at(2))
+        (a-shifted, b-shifted, elbow, elbow, (bx, by, a.at(2)))
+      } else if routing-dir == "east" or routing-dir == "west" {
+        let ay = a.at(1) + s1
+        let by = b.at(1)
+        let ax = a.at(0)
+        let bx = b.at(0) + s2
+        let a-shifted = (ax, ay, a.at(2))
+        let elbow = (bx, ay, a.at(2))
+        let b-shifted = (bx, by, b.at(2))
+        (a-shifted, b-shifted, elbow, elbow, (bx, by, a.at(2)))
+      } else {
+        panic("edge: unsupported 2-way routing \"" + routing + "\"")
+      }
+
+      cetz.draw.line(
+        a-shifted,
+        elbow,
+        b-shifted,
+        name: line-name,
+        ..style,
+      )
+
+      if label != none {
+        let seg-name = line-name + "__seg2__"
+        cetz.draw.line(label-start, label-end, name: seg-name, stroke: none)
+        _edge-place-label(seg-name, label, label-pos, label-dist, label-align, label-angle, label-inset)
+      }
+    })
+  } else if routing-kind == "3w" {
     // --- 3-segment routed line ---
     // Requires exactly 2 positional points (start and end).
     //
     // shift offsets start and end in the direction of the middle segment:
-    //   "north"/"south": middle is horizontal → shift is an x offset
-    //   "west"/"east":   middle is vertical   → shift is a y offset
+    //   "3w-north"/"3w-south": middle is horizontal → shift is an x offset
+    //   "3w-west"/"3w-east":   middle is vertical   → shift is a y offset
     //
     // shift can be a single value (same for both endpoints) or an array
     // (shift-a, shift-b) for independent per-endpoint control.
+    assert(points.len() == 2, message: "3-way routing requires exactly 2 points")
     let (pt-start, pt-end) = (points.at(0), points.at(1))
 
     cetz.draw.get-ctx(ctx => {
@@ -527,7 +600,7 @@
         v
       } else {
         // Default: half the span in the routing direction
-        if routing == "south" or routing == "north" {
+        if routing-dir == "south" or routing-dir == "north" {
           let span = calc.abs(b.at(0) - a.at(0))
           if span < _eps {
             panic(
@@ -557,11 +630,11 @@
       // Compute the 2 intermediate waypoints, applying shift to the x (for
       // north/south) or y (for west/east) of each endpoint.
       //
-      //   "south":  A → down by bend → across → up to B
-      //   "north":  A → up by bend → across → down to B
-      //   "west":   A → left by bend → across → right to B
-      //   "east":   A → right by bend → across → left to B
-      let (a-shifted, b-shifted, p1, p2) = if routing == "south" {
+      //   "3w-south":  A → down by bend → across → up to B
+      //   "3w-north":  A → up by bend → across → down to B
+      //   "3w-west":   A → left by bend → across → right to B
+      //   "3w-east":   A → right by bend → across → left to B
+      let (a-shifted, b-shifted, p1, p2) = if routing-dir == "south" {
         let ax = a.at(0) + sa
         let bx = b.at(0) + sb
         (
@@ -570,7 +643,7 @@
           (ax, a.at(1) - bend-val, a.at(2)),
           (bx, a.at(1) - bend-val, a.at(2)),
         )
-      } else if routing == "north" {
+      } else if routing-dir == "north" {
         let ax = a.at(0) + sa
         let bx = b.at(0) + sb
         (
@@ -579,7 +652,7 @@
           (ax, a.at(1) + bend-val, a.at(2)),
           (bx, a.at(1) + bend-val, a.at(2)),
         )
-      } else if routing == "west" {
+      } else if routing-dir == "west" {
         let ay = a.at(1) + sa
         let by = b.at(1) + sb
         (
@@ -588,7 +661,7 @@
           (a.at(0) - bend-val, ay, a.at(2)),
           (a.at(0) - bend-val, by, a.at(2)),
         )
-      } else if routing == "east" {
+      } else if routing-dir == "east" {
         let ay = a.at(1) + sa
         let by = b.at(1) + sb
         (
@@ -597,6 +670,8 @@
           (a.at(0) + bend-val, ay, a.at(2)),
           (a.at(0) + bend-val, by, a.at(2)),
         )
+      } else {
+        panic("edge: unsupported 3-way routing \"" + routing + "\"")
       }
 
       // Draw the full 3-segment line
@@ -617,5 +692,7 @@
         _edge-place-label(mid-name, label, label-pos, label-dist, label-align, label-angle, label-inset)
       }
     })
+  } else {
+    panic("edge: unsupported routing " + repr(routing))
   }
 }

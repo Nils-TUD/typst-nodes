@@ -20,5 +20,5 @@
   edge("a.south", "c.north", label: [dist], label-pos: (50%, "west"), label-dist: .3cm, mark: (end: ">"), stroke: red)
 
   // Label with 3-segment routing on the middle segment
-  edge("b.east", "d.east", routing: "east", label: [routed], label-pos: (50%, "east"), mark: (end: ">"), stroke: green)
+  edge("b.east", "d.east", routing: "3w-east", label: [routed], label-pos: (50%, "east"), mark: (end: ">"), stroke: green)
 })

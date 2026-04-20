@@ -95,19 +95,34 @@ edge("c.north",      "a.south", routing: "vertical",   mark: (end: ">"), stroke:
 edge("a.north-east", "b.west", routing: "horizontal", shift: -.3cm, stroke: blue, mark: (end: ">"))
 ```
 
-#### 3-segment orthogonal routing
+#### 2-segment orthogonal routing
 
-Routes the edge out in a given direction, runs a horizontal or vertical middle segment, then turns back to the destination. `bend` controls how far the route extends before turning (defaults to half the span between endpoints):
+Routes the edge with a single elbow. `2w-north`/`2w-south` go vertical first to the destination's y coordinate, then horizontal; `2w-east`/`2w-west` go horizontal first to the destination's x coordinate, then vertical:
 
 ```typst
-edge("a.south", "b.south", routing: "south", bend: .5, mark: (end: ">"))
-edge("a.east",  "c.east",  routing: "east",  bend: .8, mark: (end: ">"), stroke: red)
+edge("a.south", "b.west", routing: "2w-south", mark: (end: ">"))
+edge("a.north", "b.east", routing: "2w-north", shift: .3cm, mark: (end: ">"), stroke: blue)
+```
+
+`shift` offsets the two route segments. For `2w-north`/`2w-south`, `shift: (a, b)` means horizontal shift `a` for the first segment and vertical shift `b` for the second. For `2w-east`/`2w-west`, it means vertical shift `a` for the first segment and horizontal shift `b` for the second. A scalar applies to both. Labels on `2w-*` routes are positioned along the second segment.
+
+```typst
+edge("a.north", "b.east", routing: "2w-north", shift: (.3cm, -.2cm), mark: (end: ">"))
+```
+
+#### 3-segment orthogonal routing
+
+Routes the edge out in a given direction, runs a horizontal or vertical middle segment, then turns back to the destination. Use the explicit `3w-*` routing names. `bend` controls how far the route extends before turning (defaults to half the span between endpoints):
+
+```typst
+edge("a.south", "b.south", routing: "3w-south", bend: .5, mark: (end: ">"))
+edge("a.east",  "c.east",  routing: "3w-east",  bend: .8, mark: (end: ">"), stroke: red)
 ```
 
 `shift` offsets each endpoint along the middle segment. Pass an array for independent per-endpoint control:
 
 ```typst
-edge("a.south", "b.south", routing: "south", shift: (-.2, .2), mark: (end: ">"))
+edge("a.south", "b.south", routing: "3w-south", shift: (-.2, .2), mark: (end: ">"))
 ```
 
 #### Edge labels
