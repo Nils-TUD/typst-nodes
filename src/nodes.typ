@@ -96,6 +96,22 @@
   )
 }
 
+#let _resolve-node-size(ctx, width, height, relative-to: none) = {
+  let (width, height) = if relative-to != none and (type(width) == ratio or type(height) == ratio) {
+    let con-size = _get-element-size(ctx, relative-to)
+    let width = if type(width) == ratio { float(width * con-size.at(0)) } else { width }
+    let height = if type(height) == ratio { float(height * con-size.at(1)) } else { height }
+    (width, height)
+  } else {
+    (width, height)
+  }
+
+  (
+    cetz.util.resolve-number(ctx, width),
+    cetz.util.resolve-number(ctx, height),
+  )
+}
+
 #let _resolve-outer(ctx, dir, el, dist, align, width, height) = {
   // "north-of" -> "north"
   let edge = dir.slice(0, -3)
@@ -178,6 +194,46 @@
   let pt-a = cetz.coordinate.resolve(ctx, (name: el-a, anchor: "center")).at(1)
   let pt-b = cetz.coordinate.resolve(ctx, (name: el-b, anchor: "center")).at(1)
   cetz.vector.scale(cetz.vector.add(pt-a, pt-b), .5)
+}
+
+#let _is-node-placement(c) = {
+  type(c) == dictionary and c.len() == 1 and {
+    let dir = c.keys().first()
+    dir in _outer-coords or dir in _inner-coords or dir == "between"
+  }
+}
+
+#let _rewrite-node-origin(ctx, c, width, height) = {
+  if _is-node-placement(c) {
+    let (dir, spec) = c.pairs().first()
+
+    if dir in _outer-coords {
+      let (el, dist, align) = _parse-placement-spec(spec)
+      let dist = cetz.util.resolve-number(ctx, dist)
+      let (width, height) = _resolve-node-size(ctx, width, height)
+      _resolve-outer(ctx, dir, el, dist, align, width, height)
+    } else if dir in _inner-coords {
+      let (el, dist, _) = _parse-placement-spec(spec)
+      let dist = cetz.util.resolve-number(ctx, dist)
+      let (width, height) = _resolve-node-size(ctx, width, height, relative-to: el)
+      _resolve-inner(dir, el, dist, width, height).at(0)
+    } else {
+      let (el-a, el-b) = spec
+      let (width, height) = _resolve-node-size(ctx, width, height)
+      let mid = _resolve-between(ctx, el-a, el-b)
+      cetz.vector.add(mid, (-width / 2, -height / 2, 0))
+    }
+  } else if type(c) == dictionary {
+    let mapped = (:)
+    for (k, v) in c.pairs() {
+      mapped.insert(k, _rewrite-node-origin(ctx, v, width, height))
+    }
+    mapped
+  } else if type(c) == array {
+    c.map(v => _rewrite-node-origin(ctx, v, width, height))
+  } else {
+    c
+  }
 }
 
 #let _resolve-node-coordinate(ctx, c) = {
@@ -313,54 +369,34 @@
 
     // determine location and size
     _assert-nodes-canvas(ctx)
+    let origin = if _is-node-placement(origin) {
+      origin
+    } else {
+      _rewrite-node-origin(ctx, origin, width, height)
+    }
     let (anchor, loc, size) = if type(origin) == dictionary {
       let (dir, spec) = origin.pairs().first()
 
       if dir == "between" {
         let (el-a, el-b) = spec
-        // make size absolute
-        let width = cetz.util.resolve-number(ctx, width)
-        let height = cetz.util.resolve-number(ctx, height)
+        let (width, height) = _resolve-node-size(ctx, width, height)
         let mid = _resolve-between(ctx, el-a, el-b)
         let loc = cetz.vector.add(mid, (-width / 2, -height / 2, 0))
         ("center", loc, (rel: (width, height)))
       } else {
-        let (el, dist, align) = if type(spec) == array {
-          if spec.len() == 2 {
-            let (el, dist) = spec
-            (el, dist, "center")
-          } else {
-            spec
-          }
-        } else {
-          (spec, 0, "center")
-        }
+        let (el, dist, align) = _parse-placement-spec(spec)
         let dist = cetz.util.resolve-number(ctx, dist)
 
-         if dir in _outer-coords {
-          // make size absolute
-          let width = cetz.util.resolve-number(ctx, width)
-          let height = cetz.util.resolve-number(ctx, height)
+        if dir in _outer-coords {
+          let (width, height) = _resolve-node-size(ctx, width, height)
 
           (
             "center",
             _resolve-outer(ctx, dir, el, dist, align, width, height),
             (rel: (width, height)),
           )
-         } else if dir in _inner-coords {
-          // resolve ratios to container-relative sizes
-          let (width, height) = if type(width) == ratio or type(height) == ratio {
-            let con-size = _get-element-size(ctx, el)
-            let width = if type(width) == ratio { float(width * con-size.at(0)) } else { width }
-            let height = if type(height) == ratio { float(height * con-size.at(1)) } else { height }
-            (width, height)
-          } else {
-            (width, height)
-          }
-
-          // make size absolute
-          let width = cetz.util.resolve-number(ctx, width)
-          let height = cetz.util.resolve-number(ctx, height)
+        } else if dir in _inner-coords {
+          let (width, height) = _resolve-node-size(ctx, width, height, relative-to: el)
 
           let (loc, size) = _resolve-inner(dir, el, dist, width, height)
           ("center", loc, size)
