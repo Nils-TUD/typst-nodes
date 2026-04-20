@@ -73,7 +73,7 @@ Use `canvas(...)` from this package instead of `cetz.canvas(...)` whenever you u
 #### Straight edge
 
 ```typst
-#cetz.canvas({
+#canvas({
   node((-2.5, 0), [A], name: "a")
   node(( 2.5, 0), [B], name: "b")
   node(( 0,  -2), [C], name: "c")
