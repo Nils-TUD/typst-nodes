@@ -54,13 +54,14 @@ Use `in-north`, `in-south`, `in-east`, `in-west` (and corner variants) to pin a 
 })
 ```
 
-#### Placement between two nodes
+#### Placement between two coordinates
 
 ```typst
 #canvas({
   node((-2.5, 0), [Left],  name: "l")
   node(( 2.5, 0), [Right], name: "r")
   node((between: ("l", "r")), [Mid], width: 1.5cm, height: .8cm, fill: silver)
+  node((between: ("l.north", "r.south")), [Anchors], width: 1.7cm, height: .8cm)
 })
 ```
 

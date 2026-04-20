@@ -191,8 +191,8 @@
 }
 
 #let _resolve-between(ctx, el-a, el-b) = {
-  let pt-a = cetz.coordinate.resolve(ctx, (name: el-a, anchor: "center")).at(1)
-  let pt-b = cetz.coordinate.resolve(ctx, (name: el-b, anchor: "center")).at(1)
+  let pt-a = cetz.coordinate.resolve(ctx, el-a).at(1)
+  let pt-b = cetz.coordinate.resolve(ctx, el-b).at(1)
   cetz.vector.scale(cetz.vector.add(pt-a, pt-b), .5)
 }
 
@@ -309,8 +309,9 @@
 ///     given inner edge/corner/centre. The value follows the same conventions
 ///     as the outer-placement keys above. `width` and `height` may be given as
 ///     ratios (e.g. `50%`) to size the child relative to the container.
-///   - `"between"`: centres the node between two existing elements. The value
-///     must be a two-element array `(el-a, el-b)`.
+///   - `"between"`: centres the node between two existing coordinates. The
+///     value must be a two-element array `(coord-a, coord-b)` and may include
+///     node anchors like `("foo.north", "bar.south")`.
 ///
 /// The remaining arguments are:
 /// - `body` (`content`) -- Content rendered inside the node.

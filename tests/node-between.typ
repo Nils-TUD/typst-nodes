@@ -23,5 +23,23 @@
     width: 2cm,
     height: 1cm,
     fill: red,
+    name: "mid",
+  )
+
+  node(
+    (between: ("l.north", "r.south")),
+    [Anchors],
+    width: 1.7cm,
+    height: .8cm,
+    fill: aqua.lighten(60%),
+    name: "anchors",
+  )
+
+  node(
+    (between: ("anchors.north-east", "mid.south-west")),
+    [+],
+    width: .5cm,
+    height: .5cm,
+    fill: green.lighten(60%),
   )
 })
