@@ -485,6 +485,15 @@
   }
 }
 
+#let _rotated-rect-support(width, height, angle, nx, ny) = {
+  let cos-a = calc.cos(angle)
+  let sin-a = calc.sin(angle)
+  let width-support = calc.abs(nx * cos-a + ny * sin-a) * width / 2
+  let height-support = calc.abs(-nx * sin-a + ny * cos-a) * height / 2
+
+  width-support + height-support
+}
+
 // Place a label alongside a named CeTZ line segment.
 //
 // seg-names  — array of named auxiliary line names, one per segment, in order.
@@ -523,6 +532,8 @@
     if dist == 0.0 {
       cetz.draw.content(pt, anchor: "center", align(label-align)[#label-content])
     } else {
+      let (label-width, label-height) = cetz.util.measure(ctx, label-content)
+
       // Determine the segment's axis from its endpoints so we can apply a
       // canonical sign convention that is independent of travel direction:
       //   horizontal segment → positive dist = north, negative = south
@@ -534,37 +545,31 @@
       let dy = calc.abs(p1.at(1) - p0.at(1))
       let _eps = 1e-6
 
-      let (anchor, offset-x, offset-y) = if dy < _eps {
-        // Horizontal segment: canonical normal is (0, 1) = north
-        if dist > 0 { ("south", 0.0,  dist) }
-        else        { ("north", 0.0,  dist) }
+      let (normal-x, normal-y) = if dy < _eps {
+        // Horizontal segment: canonical positive normal is (0, 1) = north
+        (0.0, 1.0)
       } else if dx < _eps {
-        // Vertical segment: canonical normal is (1, 0) = east
-        if dist > 0 { ("west",  dist, 0.0) }
-        else        { ("east",  dist, 0.0) }
+        // Vertical segment: canonical positive normal is (1, 0) = east
+        (1.0, 0.0)
       } else {
-        // Diagonal: left-hand normal of travel direction
+        // Diagonal: canonical positive normal is the left-hand normal of the
+        // segment's travel direction.
         let raw-dx = p1.at(0) - p0.at(0)
         let raw-dy = p1.at(1) - p0.at(1)
         let len = calc.sqrt(raw-dx * raw-dx + raw-dy * raw-dy)
-        let nx = -raw-dy / len
-        let ny =  raw-dx / len
-        let ox = dist * nx
-        let oy = dist * ny
-        let anc = if calc.abs(nx) >= calc.abs(ny) {
-          if (nx > 0) == (dist > 0) { "west" } else { "east" }
-        } else {
-          if (ny > 0) == (dist > 0) { "south" } else { "north" }
-        }
-        (anc, ox, oy)
+        (-raw-dy / len, raw-dx / len)
       }
 
-      let label-pt = (pt.at(0) + offset-x, pt.at(1) + offset-y, pt.at(2))
-      cetz.draw.content(label-pt, anchor: anchor, align(label-align)[#label-content])
+      let sign = if dist > 0 { 1.0 } else { -1.0 }
+      let support = _rotated-rect-support(label-width, label-height, label-angle, normal-x, normal-y)
+      let offset = calc.abs(dist) + support
+      let label-pt = (
+        pt.at(0) + sign * normal-x * offset,
+        pt.at(1) + sign * normal-y * offset,
+        pt.at(2),
+      )
+      cetz.draw.content(label-pt, anchor: "center", align(label-align)[#label-content])
     }
-  })
-}
-
   })
 }
 
