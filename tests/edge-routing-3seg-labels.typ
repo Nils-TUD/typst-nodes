@@ -10,7 +10,7 @@
 #set page(width: 10cm, height: 9cm, margin: 5pt)
 
 #let lbl(text) = box(fill: white, stroke: black, inset: .3em, text)
-#let tedge(..args) = edge(label-inset: 0pt, bend: .5, mark: (end: ">"), ..args)
+#let tedge(..args) = edge(bend: .5, mark: (end: ">"), ..args)
 
 #canvas({
   node((-3, 3), [A], width: 2cm, height: 2cm, name: "a", stroke: black)

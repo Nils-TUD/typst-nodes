@@ -1,10 +1,10 @@
-// Test: edge label with label-angle and label-inset
+// Test: edge label with label-angle and label-pos distance
 #import "@preview/cetz:0.4.2"
 #import "/src/nodes.typ": canvas, edge, node
 
-#set page(width: 10cm, height: 8cm, margin: 5pt)
+#set page(width: 10cm, height: 10cm, margin: 5pt)
 
-#let lbl(lbl, ..args) = box(inset: .2cm, stroke: black, lbl)
+#let lbl(lbl, ..args) = box(inset: .1cm, stroke: black, lbl)
 
 #canvas({
   node((-3, 2), [A], name: "a", stroke: black)
@@ -18,13 +18,13 @@
   // label-angle: 90deg (vertical label)
   edge("c.east", "d.west", label: lbl[90°], label-angle: 90deg, stroke: blue, mark: (end: ">"))
 
-  // label-inset: large inset creates a bigger box around the label
-  edge("a.south", "c.north", label: lbl[inset], label-pos: .2, label-inset: .2cm, stroke: red, mark: (
+  // label-pos: small distance using the label's own box bounds
+  edge("a.south", "c.north", label: lbl[dist .2], label-pos: .2, stroke: red, mark: (
     end: ">",
   ))
 
-  // label-inset: zero — label sits flush against the line
-  edge("b.south", "d.north", label: lbl[0 inset], label-pos: (30%, .3), label-inset: 0pt, stroke: green, mark: (
+  // label-pos: larger distance on a vertical edge
+  edge("b.south", "d.north", label: lbl[dist .3], label-pos: (30%, .3), stroke: green, mark: (
     end: ">",
   ))
 })

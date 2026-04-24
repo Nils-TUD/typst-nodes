@@ -512,7 +512,6 @@
   dist,
   label-align,
   label-angle,
-  label-inset,
 ) = {
   let seg-idx = seg-num - 1
   assert(
@@ -522,7 +521,7 @@
   let seg-name = seg-names.at(seg-idx)
 
   cetz.draw.get-ctx(ctx => {
-    let label-content = box(inset: label-inset, rotate(label-angle)[#label])
+    let label-content = rotate(label-angle)[#label]
 
     // Resolve position along the segment.
     // CeTZ percent anchors require an integer string like "30%", not "30.0%".
@@ -631,8 +630,6 @@
 ///   content. Defaults to `center`.
 /// - `label-angle` (`angle`) -- Rotation applied to the label content.
 ///   Defaults to `0deg`.
-/// - `label-inset` (`length`) -- Inset applied around the label content box.
-///   Defaults to `0.3em`.
 /// - `routing` (`none` or `string`) -- Routing strategy. One of `none`,
 ///   `"horizontal"`, `"vertical"`, `"2w-north"`, `"2w-south"`, `"2w-east"`,
 ///   `"2w-west"`, `"3w-north"`, `"3w-south"`, `"3w-east"`, `"3w-west"`.
@@ -652,7 +649,6 @@
   label-pos: 0.3,
   label-align: center,
   label-angle: 0deg,
-  label-inset: .3em,
   routing: none,
   bend: auto,
   shift: 0,
@@ -690,7 +686,7 @@
 
     if label != none {
       let (seg-num, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: 1, default-dist: 0.3)
-      _edge-place-label((line-name,), label, seg-num, pos-ratio, dist, label-align, label-angle, label-inset)
+      _edge-place-label((line-name,), label, seg-num, pos-ratio, dist, label-align, label-angle)
     }
   } else if routing == "horizontal" or routing == "vertical" {
     // --- Single straight segment (horizontal or vertical) ---
@@ -730,7 +726,7 @@
 
       if label != none {
         let (seg-num, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: 1, default-dist: 0.3)
-        _edge-place-label((line-name,), label, seg-num, pos-ratio, dist, label-align, label-angle, label-inset)
+        _edge-place-label((line-name,), label, seg-num, pos-ratio, dist, label-align, label-angle)
       }
     })
   } else if routing-kind == "2w" {
@@ -789,7 +785,7 @@
         _edge-place-label(
           (seg1-name, seg2-name),
           label, seg-num, pos-ratio, dist,
-          label-align, label-angle, label-inset,
+          label-align, label-angle,
         )
       }
     })
@@ -925,7 +921,7 @@
         _edge-place-label(
           (seg1-name, seg2-name, seg3-name),
           label, seg-num, pos-ratio, dist,
-          label-align, label-angle, label-inset,
+          label-align, label-angle,
         )
       }
     })
