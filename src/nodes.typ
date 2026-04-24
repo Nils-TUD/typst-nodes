@@ -290,6 +290,93 @@
   )
 }
 
+#let _node-resolve-body-size(ctx, body, width, height, body-angle) = {
+  if width != auto and height != auto {
+    return (width, height)
+  }
+
+  let (cw, ch) = cetz.util.measure(ctx, body)
+  if body-angle != 0deg {
+    let cos-a = calc.abs(calc.cos(body-angle))
+    let sin-a = calc.abs(calc.sin(body-angle))
+    let rw = cw * cos-a + ch * sin-a
+    let rh = cw * sin-a + ch * cos-a
+    (cw, ch) = (rw, rh)
+  }
+
+  (
+    if width == auto { cw } else { width },
+    if height == auto { ch } else { height },
+  )
+}
+
+#let _resolve-node-dict-origin(ctx, origin, width, height, style) = {
+  let (dir, spec) = origin.pairs().first()
+
+  if dir == "between" {
+    let (el-a, el-b) = spec
+    let (width, height) = _resolve-node-size(ctx, width, height)
+    let mid = _resolve-between(ctx, el-a, el-b)
+    let loc = cetz.vector.add(mid, (-width / 2, -height / 2, 0))
+    return ("center", loc, (rel: (width, height)))
+  }
+
+  let (el, dist, align) = _parse-placement-spec(spec)
+  let dist = cetz.util.resolve-number(ctx, dist)
+
+  if dir in _outer-coords {
+    let (width, height) = _resolve-node-size(ctx, width, height)
+    (
+      "center",
+      _resolve-outer(ctx, dir, el, dist, align, width, height),
+      (rel: (width, height)),
+    )
+  } else if dir in _inner-coords {
+    let (width, height) = _resolve-node-size(ctx, width, height, relative-to: el)
+    let (loc, size) = _resolve-inner(dir, el, dist, width, height)
+    ("center", loc, size)
+  } else {
+    (style.at("anchor", default: "center"), origin, (rel: (width, height)))
+  }
+}
+
+#let _node-resolve-rect(ctx, origin, width, height, style) = {
+  let origin = if _is-node-placement(origin) {
+    origin
+  } else {
+    _rewrite-node-origin(ctx, origin, width, height)
+  }
+
+  if type(origin) == dictionary {
+    _resolve-node-dict-origin(ctx, origin, width, height, style)
+  } else {
+    (style.at("anchor", default: "center"), origin, (rel: (width, height)))
+  }
+}
+
+#let _node-resolve-body-placement(name, body-pos, body-dist) = {
+  let body-anc = name + "." + body-pos
+  if body-pos == "north" {
+    ((rel: (0, -body-dist), to: body-anc), "north")
+  } else if body-pos == "south" {
+    ((rel: (0, body-dist), to: body-anc), "south")
+  } else if body-pos == "west" {
+    ((rel: (body-dist, 0), to: body-anc), "west")
+  } else if body-pos == "east" {
+    ((rel: (-body-dist, 0), to: body-anc), "east")
+  } else if body-pos == "north-west" {
+    ((rel: (body-dist, -body-dist), to: body-anc), "north-west")
+  } else if body-pos == "north-east" {
+    ((rel: (-body-dist, -body-dist), to: body-anc), "north-east")
+  } else if body-pos == "south-west" {
+    ((rel: (body-dist, body-dist), to: body-anc), "south-west")
+  } else if body-pos == "south-east" {
+    ((rel: (-body-dist, body-dist), to: body-anc), "south-east")
+  } else {
+    (name, "center")
+  }
+}
+
 /// Draw a rectangular node (box) with a label on a CeTZ canvas.
 ///
 /// The node's position and size are controlled by `origin`, which can be:
@@ -351,67 +438,10 @@
 ) = {
   cetz.draw.get-ctx(ctx => {
     let body = box(inset: inset, rotate(body-angle)[#body])
+    let (width, height) = _node-resolve-body-size(ctx, body, width, height, body-angle)
 
-    // determine content width and height
-    let (width, height) = if width == auto or height == auto {
-      let (cw, ch) = cetz.util.measure(ctx, body)
-      // cetz.util.measure returns the size of the unrotated body, so we need
-      // to compute the axis-aligned bounding box of the rotated rectangle.
-      if body-angle != 0deg {
-        let cos-a = calc.abs(calc.cos(body-angle))
-        let sin-a = calc.abs(calc.sin(body-angle))
-        let rw = cw * cos-a + ch * sin-a
-        let rh = cw * sin-a + ch * cos-a
-        (cw, ch) = (rw, rh)
-      }
-      (
-        if width == auto { cw } else { width },
-        if height == auto { ch } else { height },
-      )
-    } else {
-      (width, height)
-    }
-
-    // determine location and size
     _assert-nodes-canvas(ctx)
-    let origin = if _is-node-placement(origin) {
-      origin
-    } else {
-      _rewrite-node-origin(ctx, origin, width, height)
-    }
-    let (anchor, loc, size) = if type(origin) == dictionary {
-      let (dir, spec) = origin.pairs().first()
-
-      if dir == "between" {
-        let (el-a, el-b) = spec
-        let (width, height) = _resolve-node-size(ctx, width, height)
-        let mid = _resolve-between(ctx, el-a, el-b)
-        let loc = cetz.vector.add(mid, (-width / 2, -height / 2, 0))
-        ("center", loc, (rel: (width, height)))
-      } else {
-        let (el, dist, align) = _parse-placement-spec(spec)
-        let dist = cetz.util.resolve-number(ctx, dist)
-
-        if dir in _outer-coords {
-          let (width, height) = _resolve-node-size(ctx, width, height)
-
-          (
-            "center",
-            _resolve-outer(ctx, dir, el, dist, align, width, height),
-            (rel: (width, height)),
-          )
-        } else if dir in _inner-coords {
-          let (width, height) = _resolve-node-size(ctx, width, height, relative-to: el)
-
-          let (loc, size) = _resolve-inner(dir, el, dist, width, height)
-          ("center", loc, size)
-        } else {
-          (style.at("anchor", default: "center"), origin, (rel: (width, height)))
-        }
-      }
-    } else {
-      (style.at("anchor", default: "center"), origin, (rel: (width, height)))
-    }
+    let (anchor, loc, size) = _node-resolve-rect(ctx, origin, width, height, style)
 
     let name = style.at("name", default: "__r__")
     cetz.draw.rect(
@@ -422,26 +452,7 @@
       ..style,
     )
 
-    let body-anc = name + "." + body-pos
-    let (pos, anc) = if body-pos == "north" {
-      ((rel: (0, -body-dist), to: body-anc), "north")
-    } else if body-pos == "south" {
-      ((rel: (0, body-dist), to: body-anc), "south")
-    } else if body-pos == "west" {
-      ((rel: (body-dist, 0), to: body-anc), "west")
-    } else if body-pos == "east" {
-      ((rel: (-body-dist, 0), to: body-anc), "east")
-    } else if body-pos == "north-west" {
-      ((rel: (body-dist, -body-dist), to: body-anc), "north-west")
-    } else if body-pos == "north-east" {
-      ((rel: (-body-dist, -body-dist), to: body-anc), "north-east")
-    } else if body-pos == "south-west" {
-      ((rel: (body-dist, body-dist), to: body-anc), "south-west")
-    } else if body-pos == "south-east" {
-      ((rel: (-body-dist, body-dist), to: body-anc), "south-east")
-    } else {
-      (name, "center")
-    }
+    let (pos, anc) = _node-resolve-body-placement(name, body-pos, body-dist)
     cetz.draw.content(pos, anchor: anc, align(body-align)[#body])
   })
 }
@@ -580,6 +591,259 @@
   })
 }
 
+#let _edge-normalize-args(args) = {
+  let points = args.pos()
+  let style = args.named()
+  let user-name = style.at("name", default: none)
+  let line-name = if user-name != none { user-name } else { "__edge__" }
+  if "name" in style {
+    let _ = style.remove("name")
+  }
+  (points, style, line-name)
+}
+
+#let _edge-parse-routing(routing) = {
+  if routing != none and type(routing) == str and routing.starts-with("2w-") {
+    ("2w", routing.slice(3))
+  } else if routing != none and type(routing) == str and routing.starts-with("3w-") {
+    ("3w", routing.slice(3))
+  } else {
+    (none, none)
+  }
+}
+
+#let _edge-draw-label(seg-names, label, label-pos, default-seg, label-align, label-angle) = {
+  if label == none {
+    return
+  }
+
+  let (seg-num, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: default-seg, default-dist: 0.3)
+  _edge-place-label(seg-names, label, seg-num, pos-ratio, dist, label-align, label-angle)
+}
+
+#let _edge-resolve-shift-pair(ctx, shift) = {
+  if type(shift) == array {
+    (cetz.util.resolve-number(ctx, shift.at(0)), cetz.util.resolve-number(ctx, shift.at(1)))
+  } else {
+    let s = cetz.util.resolve-number(ctx, shift)
+    (s, s)
+  }
+}
+
+#let _edge-resolve-axis-points(a, b, routing, shift) = {
+  if routing == "horizontal" {
+    (
+      (a.at(0), a.at(1) + shift, a.at(2)),
+      (b.at(0), a.at(1) + shift, a.at(2)),
+    )
+  } else {
+    (
+      (a.at(0) + shift, a.at(1), a.at(2)),
+      (a.at(0) + shift, b.at(1), a.at(2)),
+    )
+  }
+}
+
+#let _edge-resolve-2w-points(a, b, routing, routing-dir, s1, s2) = {
+  if routing-dir == "north" or routing-dir == "south" {
+    let ax = a.at(0) + s1
+    let bx = b.at(0)
+    let ay = a.at(1)
+    let by = b.at(1) + s2
+    let a-shifted = (ax, ay, a.at(2))
+    let elbow = (ax, by, a.at(2))
+    let b-shifted = (bx, by, b.at(2))
+    (a-shifted, b-shifted, elbow)
+  } else if routing-dir == "east" or routing-dir == "west" {
+    let ay = a.at(1) + s1
+    let by = b.at(1)
+    let ax = a.at(0)
+    let bx = b.at(0) + s2
+    let a-shifted = (ax, ay, a.at(2))
+    let elbow = (bx, ay, a.at(2))
+    let b-shifted = (bx, by, b.at(2))
+    (a-shifted, b-shifted, elbow)
+  } else {
+    panic("edge: unsupported 2-way routing \"" + routing + "\"")
+  }
+}
+
+#let _edge-resolve-3w-bend(ctx, a, b, routing-dir, bend) = {
+  let _eps = 1e-10
+
+  if bend != auto {
+    if type(bend) == str {
+      assert(
+        bend == "same-dir" or bend == "opposite-dir",
+        message: "bend must be auto, \"same-dir\", \"opposite-dir\", or a non-zero length",
+      )
+
+      let primary-y-axis = routing-dir == "south" or routing-dir == "north"
+      let use-y-span = if bend == "same-dir" { primary-y-axis } else { not primary-y-axis }
+      let span = if use-y-span { calc.abs(b.at(1) - a.at(1)) } else { calc.abs(b.at(0) - a.at(0)) }
+      return span / 2
+    }
+
+    let v = cetz.util.resolve-number(ctx, bend)
+    assert(v != 0, message: "bend must be non-zero")
+    return v
+  }
+
+  let primary-y-axis = routing-dir == "south" or routing-dir == "north"
+  let same-axis = if primary-y-axis {
+    calc.abs(b.at(1) - a.at(1)) < _eps
+  } else {
+    calc.abs(b.at(0) - a.at(0)) < _eps
+  }
+  let use-y-span = if primary-y-axis { not same-axis } else { same-axis }
+  let span = if use-y-span { calc.abs(b.at(1) - a.at(1)) } else { calc.abs(b.at(0) - a.at(0)) }
+  span / 2
+}
+
+#let _edge-resolve-3w-points(a, b, routing, routing-dir, sa, sb, bend-val) = {
+  if routing-dir == "south" {
+    let ax = a.at(0) + sa
+    let bx = b.at(0) + sb
+    (
+      (ax, a.at(1), a.at(2)),
+      (bx, b.at(1), b.at(2)),
+      (ax, a.at(1) - bend-val, a.at(2)),
+      (bx, a.at(1) - bend-val, a.at(2)),
+    )
+  } else if routing-dir == "north" {
+    let ax = a.at(0) + sa
+    let bx = b.at(0) + sb
+    (
+      (ax, a.at(1), a.at(2)),
+      (bx, b.at(1), b.at(2)),
+      (ax, a.at(1) + bend-val, a.at(2)),
+      (bx, a.at(1) + bend-val, a.at(2)),
+    )
+  } else if routing-dir == "west" {
+    let ay = a.at(1) + sa
+    let by = b.at(1) + sb
+    (
+      (a.at(0), ay, a.at(2)),
+      (b.at(0), by, b.at(2)),
+      (a.at(0) - bend-val, ay, a.at(2)),
+      (a.at(0) - bend-val, by, a.at(2)),
+    )
+  } else if routing-dir == "east" {
+    let ay = a.at(1) + sa
+    let by = b.at(1) + sb
+    (
+      (a.at(0), ay, a.at(2)),
+      (b.at(0), by, b.at(2)),
+      (a.at(0) + bend-val, ay, a.at(2)),
+      (a.at(0) + bend-val, by, a.at(2)),
+    )
+  } else {
+    panic("edge: unsupported 3-way routing \"" + routing + "\"")
+  }
+}
+
+#let _edge-draw-straight(points, line-name, style, label, label-pos, label-align, label-angle) = {
+  cetz.draw.line(
+    ..points,
+    name: line-name,
+    ..style,
+  )
+  _edge-draw-label((line-name,), label, label-pos, 1, label-align, label-angle)
+}
+
+#let _edge-draw-axis(points, line-name, style, label, label-pos, label-align, label-angle, routing, shift) = {
+  assert(points.len() == 2, message: "horizontal/vertical routing requires exactly 2 points")
+  let (pt-start, pt-end) = (points.at(0), points.at(1))
+
+  cetz.draw.get-ctx(ctx => {
+    let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
+    let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
+    let s = cetz.util.resolve-number(ctx, shift)
+    let (a-shifted, target) = _edge-resolve-axis-points(a, b, routing, s)
+
+    cetz.draw.line(
+      a-shifted,
+      target,
+      name: line-name,
+      ..style,
+    )
+
+    _edge-draw-label((line-name,), label, label-pos, 1, label-align, label-angle)
+  })
+}
+
+#let _edge-draw-2w(points, line-name, style, label, label-pos, label-align, label-angle, routing, routing-dir, shift) = {
+  assert(points.len() == 2, message: "2-way routing requires exactly 2 points")
+  let (pt-start, pt-end) = (points.at(0), points.at(1))
+
+  cetz.draw.get-ctx(ctx => {
+    let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
+    let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
+    let (s1, s2) = _edge-resolve-shift-pair(ctx, shift)
+    let (a-shifted, b-shifted, elbow) = _edge-resolve-2w-points(a, b, routing, routing-dir, s1, s2)
+
+    cetz.draw.line(
+      a-shifted,
+      elbow,
+      b-shifted,
+      name: line-name,
+      ..style,
+    )
+
+    if label != none {
+      let seg1-name = line-name + "__seg1__"
+      let seg2-name = line-name + "__seg2__"
+      cetz.draw.line(a-shifted, elbow, name: seg1-name, stroke: none)
+      cetz.draw.line(elbow, b-shifted, name: seg2-name, stroke: none)
+      _edge-draw-label((seg1-name, seg2-name), label, label-pos, 2, label-align, label-angle)
+    }
+  })
+}
+
+#let _edge-draw-3w(points, line-name, style, label, label-pos, label-align, label-angle, routing, routing-dir, bend, shift) = {
+  assert(points.len() == 2, message: "3-way routing requires exactly 2 points")
+  let (pt-start, pt-end) = (points.at(0), points.at(1))
+
+  cetz.draw.get-ctx(ctx => {
+    let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
+    let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
+    let (sa, sb) = _edge-resolve-shift-pair(ctx, shift)
+    let bend-val = _edge-resolve-3w-bend(ctx, a, b, routing-dir, bend)
+    let _eps = 1e-10
+
+    if bend-val < _eps {
+      panic(
+        "edge: routing \""
+          + routing
+          + "\" requires the two endpoints to differ in X/Y, "
+          + "but both have the same X/Y coordinate. Either use a different routing "
+          + "direction or supply an explicit (and larger) bend value.",
+      )
+    }
+
+    let (a-shifted, b-shifted, p1, p2) = _edge-resolve-3w-points(a, b, routing, routing-dir, sa, sb, bend-val)
+
+    cetz.draw.line(
+      a-shifted,
+      p1,
+      p2,
+      b-shifted,
+      name: line-name,
+      ..style,
+    )
+
+    if label != none {
+      let seg1-name = line-name + "__seg1__"
+      let seg2-name = line-name + "__seg2__"
+      let seg3-name = line-name + "__seg3__"
+      cetz.draw.line(a-shifted, p1, name: seg1-name, stroke: none)
+      cetz.draw.line(p1, p2, name: seg2-name, stroke: none)
+      cetz.draw.line(p2, b-shifted, name: seg3-name, stroke: none)
+      _edge-draw-label((seg1-name, seg2-name, seg3-name), label, label-pos, 2, label-align, label-angle)
+    }
+  })
+}
+
 /// Draw a directed or undirected edge (line) between two CeTZ coordinates or
 /// named element anchors, with optional label and routing.
 ///
@@ -672,294 +936,20 @@
   shift: 0,
   ..args,
 ) = {
-  // Separate positional (coordinates) from named (style) arguments
-  let points = args.pos()
-  let style = args.named()
-
-  // Extract name from style
-  let user-name = style.at("name", default: none)
-  let line-name = if user-name != none { user-name } else { "__edge__" }
-  if "name" in style {
-    let _ = style.remove("name")
-  }
+  let (points, style, line-name) = _edge-normalize-args(args)
 
   cetz.draw.get-ctx(ctx => _assert-nodes-canvas(ctx))
 
-  let routing-kind = if routing != none and type(routing) == str and routing.starts-with("2w-") {
-    "2w"
-  } else if routing != none and type(routing) == str and routing.starts-with("3w-") {
-    "3w"
-  } else {
-    none
-  }
-  let routing-dir = if routing-kind != none { routing.slice(3) } else { none }
+  let (routing-kind, routing-dir) = _edge-parse-routing(routing)
 
   if routing == none {
-    // --- Straight line (no routing) — shift is ignored ---
-    cetz.draw.line(
-      ..points,
-      name: line-name,
-      ..style,
-    )
-
-    if label != none {
-      let (seg-num, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: 1, default-dist: 0.3)
-      _edge-place-label((line-name,), label, seg-num, pos-ratio, dist, label-align, label-angle)
-    }
+    _edge-draw-straight(points, line-name, style, label, label-pos, label-align, label-angle)
   } else if routing == "horizontal" or routing == "vertical" {
-    // --- Single straight segment (horizontal or vertical) ---
-    // Requires exactly 2 positional points (start and end).
-    //   "horizontal":  A → (B.x, A.y)  — purely horizontal at A's y
-    //   "vertical":    A → (A.x, B.y)  — purely vertical at A's x
-    //
-    // shift offsets the line perpendicular to its direction:
-    //   "horizontal": shifts vertically (y offset)
-    //   "vertical":   shifts horizontally (x offset)
-    assert(points.len() == 2, message: "horizontal/vertical routing requires exactly 2 points")
-    let (pt-start, pt-end) = (points.at(0), points.at(1))
-
-    cetz.draw.get-ctx(ctx => {
-      let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
-      let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
-      let s = cetz.util.resolve-number(ctx, shift)
-
-      let (a-shifted, target) = if routing == "horizontal" {
-        (
-          (a.at(0), a.at(1) + s, a.at(2)),
-          (b.at(0), a.at(1) + s, a.at(2)),
-        )
-      } else {
-        (
-          (a.at(0) + s, a.at(1), a.at(2)),
-          (a.at(0) + s, b.at(1), a.at(2)),
-        )
-      }
-
-      cetz.draw.line(
-        a-shifted,
-        target,
-        name: line-name,
-        ..style,
-      )
-
-      if label != none {
-        let (seg-num, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: 1, default-dist: 0.3)
-        _edge-place-label((line-name,), label, seg-num, pos-ratio, dist, label-align, label-angle)
-      }
-    })
+    _edge-draw-axis(points, line-name, style, label, label-pos, label-align, label-angle, routing, shift)
   } else if routing-kind == "2w" {
-    // --- 2-segment routed line ---
-    assert(points.len() == 2, message: "2-way routing requires exactly 2 points")
-    let (pt-start, pt-end) = (points.at(0), points.at(1))
-
-    cetz.draw.get-ctx(ctx => {
-      let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
-      let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
-      let (s1, s2) = if type(shift) == array {
-        (cetz.util.resolve-number(ctx, shift.at(0)), cetz.util.resolve-number(ctx, shift.at(1)))
-      } else {
-        let s = cetz.util.resolve-number(ctx, shift)
-        (s, s)
-      }
-
-      let (a-shifted, b-shifted, elbow) = if routing-dir == "north" or routing-dir == "south" {
-        let ax = a.at(0) + s1
-        let bx = b.at(0)
-        let ay = a.at(1)
-        let by = b.at(1) + s2
-        let a-shifted = (ax, ay, a.at(2))
-        let elbow = (ax, by, a.at(2))
-        let b-shifted = (bx, by, b.at(2))
-        (a-shifted, b-shifted, elbow)
-      } else if routing-dir == "east" or routing-dir == "west" {
-        let ay = a.at(1) + s1
-        let by = b.at(1)
-        let ax = a.at(0)
-        let bx = b.at(0) + s2
-        let a-shifted = (ax, ay, a.at(2))
-        let elbow = (bx, ay, a.at(2))
-        let b-shifted = (bx, by, b.at(2))
-        (a-shifted, b-shifted, elbow)
-      } else {
-        panic("edge: unsupported 2-way routing \"" + routing + "\"")
-      }
-
-      cetz.draw.line(
-        a-shifted,
-        elbow,
-        b-shifted,
-        name: line-name,
-        ..style,
-      )
-
-      if label != none {
-        // Draw invisible auxiliary lines for each segment so the user can
-        // reference them by number in label-pos.
-        let seg1-name = line-name + "__seg1__"
-        let seg2-name = line-name + "__seg2__"
-        cetz.draw.line(a-shifted, elbow, name: seg1-name, stroke: none)
-        cetz.draw.line(elbow, b-shifted, name: seg2-name, stroke: none)
-        let (seg-num, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: 2, default-dist: 0.3)
-        _edge-place-label(
-          (seg1-name, seg2-name),
-          label,
-          seg-num,
-          pos-ratio,
-          dist,
-          label-align,
-          label-angle,
-        )
-      }
-    })
+    _edge-draw-2w(points, line-name, style, label, label-pos, label-align, label-angle, routing, routing-dir, shift)
   } else if routing-kind == "3w" {
-    // --- 3-segment routed line ---
-    // Requires exactly 2 positional points (start and end).
-    //
-    // shift offsets start and end in the direction of the middle segment:
-    //   "3w-north"/"3w-south": middle is horizontal → shift is an x offset
-    //   "3w-west"/"3w-east":   middle is vertical   → shift is a y offset
-    //
-    // shift can be a single value (same for both endpoints) or an array
-    // (shift-a, shift-b) for independent per-endpoint control.
-    assert(points.len() == 2, message: "3-way routing requires exactly 2 points")
-    let (pt-start, pt-end) = (points.at(0), points.at(1))
-
-    cetz.draw.get-ctx(ctx => {
-      let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
-      let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
-
-      // Resolve shift into two scalar values
-      let (sa, sb) = if type(shift) == array {
-        (cetz.util.resolve-number(ctx, shift.at(0)), cetz.util.resolve-number(ctx, shift.at(1)))
-      } else {
-        let s = cetz.util.resolve-number(ctx, shift)
-        (s, s)
-      }
-
-      // Floating-point arithmetic can produce near-zero values indistinguishable
-      // from zero when the two anchors are nominally at the same coordinate.
-      // Use an epsilon threshold so we catch those cases too.
-      let _eps = 1e-10
-      let bend-val = if bend != auto {
-        if type(bend) == str {
-          assert(
-            bend == "same-dir" or bend == "opposite-dir",
-            message: "bend must be auto, \"same-dir\", \"opposite-dir\", or a non-zero length",
-          )
-
-          let primary-y-axis = routing-dir == "south" or routing-dir == "north"
-          let use-y-span = if bend == "same-dir" { primary-y-axis } else { not primary-y-axis }
-          let span = if use-y-span { calc.abs(b.at(1) - a.at(1)) } else { calc.abs(b.at(0) - a.at(0)) }
-          span / 2
-        } else {
-          let v = cetz.util.resolve-number(ctx, bend)
-          assert(v != 0, message: "bend must be non-zero")
-          v
-        }
-      } else {
-        // Default: for north/south routing, use half the x distance when the
-        // endpoints end up at the same y position; otherwise use half the y
-        // distance. For east/west routing, analogously use half the y distance
-        // when the endpoints share x; otherwise half the x distance.
-        let primary-y-axis = routing-dir == "south" or routing-dir == "north"
-        let same-axis = if primary-y-axis {
-          calc.abs(b.at(1) - a.at(1)) < _eps
-        } else {
-          calc.abs(b.at(0) - a.at(0)) < _eps
-        }
-        let use-y-span = if primary-y-axis { not same-axis } else { same-axis }
-        let span = if use-y-span { calc.abs(b.at(1) - a.at(1)) } else { calc.abs(b.at(0) - a.at(0)) }
-        span / 2
-      }
-
-      if bend-val < _eps {
-        panic(
-          "edge: routing \""
-            + routing
-            + "\" requires the two endpoints to differ in X/Y, "
-            + "but both have the same X/Y coordinate. Either use a different routing "
-            + "direction or supply an explicit (and larger) bend value.",
-        )
-      }
-
-      // Compute the 2 intermediate waypoints, applying shift to the x (for
-      // north/south) or y (for west/east) of each endpoint.
-      //
-      //   "3w-south":  A → down by bend → across → up to B
-      //   "3w-north":  A → up by bend → across → down to B
-      //   "3w-west":   A → left by bend → across → right to B
-      //   "3w-east":   A → right by bend → across → left to B
-      let (a-shifted, b-shifted, p1, p2) = if routing-dir == "south" {
-        let ax = a.at(0) + sa
-        let bx = b.at(0) + sb
-        (
-          (ax, a.at(1), a.at(2)),
-          (bx, b.at(1), b.at(2)),
-          (ax, a.at(1) - bend-val, a.at(2)),
-          (bx, a.at(1) - bend-val, a.at(2)),
-        )
-      } else if routing-dir == "north" {
-        let ax = a.at(0) + sa
-        let bx = b.at(0) + sb
-        (
-          (ax, a.at(1), a.at(2)),
-          (bx, b.at(1), b.at(2)),
-          (ax, a.at(1) + bend-val, a.at(2)),
-          (bx, a.at(1) + bend-val, a.at(2)),
-        )
-      } else if routing-dir == "west" {
-        let ay = a.at(1) + sa
-        let by = b.at(1) + sb
-        (
-          (a.at(0), ay, a.at(2)),
-          (b.at(0), by, b.at(2)),
-          (a.at(0) - bend-val, ay, a.at(2)),
-          (a.at(0) - bend-val, by, a.at(2)),
-        )
-      } else if routing-dir == "east" {
-        let ay = a.at(1) + sa
-        let by = b.at(1) + sb
-        (
-          (a.at(0), ay, a.at(2)),
-          (b.at(0), by, b.at(2)),
-          (a.at(0) + bend-val, ay, a.at(2)),
-          (a.at(0) + bend-val, by, a.at(2)),
-        )
-      } else {
-        panic("edge: unsupported 3-way routing \"" + routing + "\"")
-      }
-
-      // Draw the full 3-segment line
-      cetz.draw.line(
-        a-shifted,
-        p1,
-        p2,
-        b-shifted,
-        name: line-name,
-        ..style,
-      )
-
-      if label != none {
-        // Draw invisible auxiliary lines for each of the 3 segments so the
-        // user can reference them by number in label-pos.
-        let seg1-name = line-name + "__seg1__"
-        let seg2-name = line-name + "__seg2__"
-        let seg3-name = line-name + "__seg3__"
-        cetz.draw.line(a-shifted, p1, name: seg1-name, stroke: none)
-        cetz.draw.line(p1, p2, name: seg2-name, stroke: none)
-        cetz.draw.line(p2, b-shifted, name: seg3-name, stroke: none)
-        let (seg-num, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: 2, default-dist: 0.3)
-        _edge-place-label(
-          (seg1-name, seg2-name, seg3-name),
-          label,
-          seg-num,
-          pos-ratio,
-          dist,
-          label-align,
-          label-angle,
-        )
-      }
-    })
+    _edge-draw-3w(points, line-name, style, label, label-pos, label-align, label-angle, routing, routing-dir, bend, shift)
   } else {
     panic("edge: unsupported routing " + repr(routing))
   }
