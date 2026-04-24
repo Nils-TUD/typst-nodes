@@ -1,4 +1,5 @@
 #import "@preview/cetz:0.4.2"
+#import "coord.typ" as coord
 #import "util.typ" as util
 
 /// Set up a CeTZ canvas with the nodes coordinate resolver registered.
@@ -8,7 +9,7 @@
 /// when using `node(...)` or `edge(...)`.
 #let canvas(length: 1cm, baseline: none, debug: false, background: none, stroke: none, padding: none, body) = context {
   let init = (
-    cetz.draw.register-coordinate-resolver(util._resolve-node-coordinate).first(),
+    cetz.draw.register-coordinate-resolver(coord._resolve-node-coordinate).first(),
     ctx => {
       ctx.shared-state.insert(util._nodes-canvas-key, true)
       (ctx: ctx)

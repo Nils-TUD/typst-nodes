@@ -1,4 +1,5 @@
 #import "@preview/cetz:0.4.2"
+#import "coord.typ" as coord
 #import "util.typ" as util
 
 #let _node-resolve-body-size(ctx, body, width, height, body-angle) = {
@@ -26,25 +27,25 @@
 
   if dir == "between" {
     let (el-a, el-b) = spec
-    let (width, height) = util._resolve-node-size(ctx, width, height)
-    let mid = util._resolve-between(ctx, el-a, el-b)
+    let (width, height) = coord._resolve-node-size(ctx, width, height)
+    let mid = coord._resolve-between(ctx, el-a, el-b)
     let loc = cetz.vector.add(mid, (-width / 2, -height / 2, 0))
     return ("center", loc, (rel: (width, height)))
   }
 
-  let (el, dist, align) = util._parse-placement-spec(spec)
+  let (el, dist, align) = coord._parse-placement-spec(spec)
   let dist = cetz.util.resolve-number(ctx, dist)
 
-  if dir in util._outer-coords {
-    let (width, height) = util._resolve-node-size(ctx, width, height)
+  if dir in coord._outer-coords {
+    let (width, height) = coord._resolve-node-size(ctx, width, height)
     (
       "center",
-      util._resolve-outer(ctx, dir, el, dist, align, width, height),
+      coord._resolve-outer(ctx, dir, el, dist, align, width, height),
       (rel: (width, height)),
     )
-  } else if dir in util._inner-coords {
-    let (width, height) = util._resolve-node-size(ctx, width, height, relative-to: el)
-    let (loc, size) = util._resolve-inner(dir, el, dist, width, height)
+  } else if dir in coord._inner-coords {
+    let (width, height) = coord._resolve-node-size(ctx, width, height, relative-to: el)
+    let (loc, size) = coord._resolve-inner(dir, el, dist, width, height)
     ("center", loc, size)
   } else {
     (style.at("anchor", default: "center"), origin, (rel: (width, height)))
@@ -52,10 +53,10 @@
 }
 
 #let _node-resolve-rect(ctx, origin, width, height, style) = {
-  let origin = if util._is-node-placement(origin) {
+  let origin = if coord._is-node-placement(origin) {
     origin
   } else {
-    util._rewrite-node-origin(ctx, origin, width, height)
+    coord._rewrite-node-origin(ctx, origin, width, height)
   }
 
   if type(origin) == dictionary {

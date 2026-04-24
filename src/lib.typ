@@ -1,4 +1,5 @@
 #import "canvas.typ" as c
+#import "coord.typ"
 #import "edge.typ" as e
 #import "node.typ" as n
 
