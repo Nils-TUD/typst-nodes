@@ -4,16 +4,16 @@
   let my-message = [#(label(repr(body)))]
 }
 
-#let _nodes-canvas-key = "__nodes_canvas__"
+#let nodes-canvas-key = "__nodes_canvas__"
 
-#let _assert-nodes-canvas(ctx) = {
+#let assert-nodes-canvas(ctx) = {
   assert(
-    ctx.shared-state.at(_nodes-canvas-key, default: false),
+    ctx.shared-state.at(nodes-canvas-key, default: false),
     message: "nodes.node and nodes.edge must be used inside nodes.canvas(...)",
   )
 }
 
-#let _get-element-size(ctx, name) = {
+#let get-element-size(ctx, name) = {
   import cetz: drawable, path-util
 
   let element = ctx.nodes.at(name)

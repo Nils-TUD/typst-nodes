@@ -27,25 +27,25 @@
 
   if dir == "between" {
     let (el-a, el-b) = spec
-    let (width, height) = coord._resolve-node-size(ctx, width, height)
-    let mid = coord._resolve-between(ctx, el-a, el-b)
+    let (width, height) = coord.resolve-node-size(ctx, width, height)
+    let mid = coord.resolve-between(ctx, el-a, el-b)
     let loc = cetz.vector.add(mid, (-width / 2, -height / 2, 0))
     return ("center", loc, (rel: (width, height)))
   }
 
-  let (el, dist, align) = coord._parse-placement-spec(spec)
+  let (el, dist, align) = coord.parse-placement-spec(spec)
   let dist = cetz.util.resolve-number(ctx, dist)
 
-  if dir in coord._outer-coords {
-    let (width, height) = coord._resolve-node-size(ctx, width, height)
+  if dir in coord.outer-coords {
+    let (width, height) = coord.resolve-node-size(ctx, width, height)
     (
       "center",
-      coord._resolve-outer(ctx, dir, el, dist, align, width, height),
+      coord.resolve-outer(ctx, dir, el, dist, align, width, height),
       (rel: (width, height)),
     )
-  } else if dir in coord._inner-coords {
-    let (width, height) = coord._resolve-node-size(ctx, width, height, relative-to: el)
-    let (loc, size) = coord._resolve-inner(dir, el, dist, width, height)
+  } else if dir in coord.inner-coords {
+    let (width, height) = coord.resolve-node-size(ctx, width, height, relative-to: el)
+    let (loc, size) = coord.resolve-inner(dir, el, dist, width, height)
     ("center", loc, size)
   } else {
     (style.at("anchor", default: "center"), origin, (rel: (width, height)))
@@ -53,10 +53,10 @@
 }
 
 #let _node-resolve-rect(ctx, origin, width, height, style) = {
-  let origin = if coord._is-node-placement(origin) {
+  let origin = if coord.is-node-placement(origin) {
     origin
   } else {
-    coord._rewrite-node-origin(ctx, origin, width, height)
+    coord.rewrite-node-origin(ctx, origin, width, height)
   }
 
   if type(origin) == dictionary {
@@ -152,7 +152,7 @@
     let body = box(inset: inset, rotate(body-angle)[#body])
     let (width, height) = _node-resolve-body-size(ctx, body, width, height, body-angle)
 
-    util._assert-nodes-canvas(ctx)
+    util.assert-nodes-canvas(ctx)
     let (anchor, loc, size) = _node-resolve-rect(ctx, origin, width, height, style)
 
     let name = style.at("name", default: "__r__")

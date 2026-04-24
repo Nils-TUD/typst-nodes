@@ -9,9 +9,9 @@
 /// when using `node(...)` or `edge(...)`.
 #let canvas(length: 1cm, baseline: none, debug: false, background: none, stroke: none, padding: none, body) = context {
   let init = (
-    cetz.draw.register-coordinate-resolver(coord._resolve-node-coordinate).first(),
+    cetz.draw.register-coordinate-resolver(coord.resolve-node-coordinate).first(),
     ctx => {
-      ctx.shared-state.insert(util._nodes-canvas-key, true)
+      ctx.shared-state.insert(util.nodes-canvas-key, true)
       (ctx: ctx)
     },
   )

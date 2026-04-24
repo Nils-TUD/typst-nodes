@@ -466,7 +466,7 @@
 ) = {
   let (points, style, line-name) = _edge-normalize-args(args)
 
-  cetz.draw.get-ctx(ctx => util._assert-nodes-canvas(ctx))
+  cetz.draw.get-ctx(ctx => util.assert-nodes-canvas(ctx))
 
   let (routing-kind, routing-dir) = _edge-parse-routing(routing)
 
