@@ -60,7 +60,7 @@
 //                horizontal segment: positive = north (up),  negative = south (down)
 //                vertical segment:   positive = east  (right), negative = west (left)
 //                0 -> center of label box placed directly on the line.
-#let _edge-place-label(
+#let _place-label(
   seg-names,
   label,
   seg-num,
@@ -119,37 +119,16 @@
   })
 }
 
-#let _edge-normalize-args(args) = {
-  let points = args.pos()
-  let style = args.named()
-  let user-name = style.at("name", default: none)
-  let line-name = if user-name != none { user-name } else { "__edge__" }
-  if "name" in style {
-    let _ = style.remove("name")
-  }
-  (points, style, line-name)
-}
-
-#let _edge-parse-routing(routing) = {
-  if routing != none and type(routing) == str and routing.starts-with("2w-") {
-    ("2w", routing.slice(3))
-  } else if routing != none and type(routing) == str and routing.starts-with("3w-") {
-    ("3w", routing.slice(3))
-  } else {
-    (none, none)
-  }
-}
-
-#let _edge-draw-label(seg-names, label, label-pos, default-seg, label-align, label-angle) = {
+#let _draw-label(seg-names, label, label-pos, default-seg, label-align, label-angle) = {
   if label == none {
     return
   }
 
   let (seg-num, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: default-seg, default-dist: 0.3)
-  _edge-place-label(seg-names, label, seg-num, pos-ratio, dist, label-align, label-angle)
+  _place-label(seg-names, label, seg-num, pos-ratio, dist, label-align, label-angle)
 }
 
-#let _edge-resolve-shift-pair(ctx, shift) = {
+#let _resolve-shift-pair(ctx, shift) = {
   if type(shift) == array {
     (cetz.util.resolve-number(ctx, shift.at(0)), cetz.util.resolve-number(ctx, shift.at(1)))
   } else {
@@ -158,21 +137,7 @@
   }
 }
 
-#let _edge-resolve-axis-points(a, b, routing, shift) = {
-  if routing == "horizontal" {
-    (
-      (a.at(0), a.at(1) + shift, a.at(2)),
-      (b.at(0), a.at(1) + shift, a.at(2)),
-    )
-  } else {
-    (
-      (a.at(0) + shift, a.at(1), a.at(2)),
-      (a.at(0) + shift, b.at(1), a.at(2)),
-    )
-  }
-}
-
-#let _edge-resolve-2w-points(a, b, routing, routing-dir, s1, s2) = {
+#let _resolve-2w-points(a, b, routing, routing-dir, s1, s2) = {
   if routing-dir == "north" or routing-dir == "south" {
     let ax = a.at(0) + s1
     let bx = b.at(0)
@@ -196,7 +161,7 @@
   }
 }
 
-#let _edge-resolve-3w-bend(ctx, a, b, routing-dir, bend) = {
+#let _resolve-3w-bend(ctx, a, b, routing-dir, bend) = {
   let _eps = 1e-10
 
   if bend != auto {
@@ -228,7 +193,7 @@
   span / 2
 }
 
-#let _edge-resolve-3w-points(a, b, routing, routing-dir, sa, sb, bend-val) = {
+#let _resolve-3w-points(a, b, routing, routing-dir, sa, sb, bend-val) = {
   if routing-dir == "south" {
     let ax = a.at(0) + sa
     let bx = b.at(0) + sb
@@ -270,16 +235,30 @@
   }
 }
 
-#let _edge-draw-straight(points, line-name, style, label, label-pos, label-align, label-angle) = {
+#let _draw-straight(points, line-name, style, label, label-pos, label-align, label-angle) = {
   cetz.draw.line(
     ..points,
     name: line-name,
     ..style,
   )
-  _edge-draw-label((line-name,), label, label-pos, 1, label-align, label-angle)
+  _draw-label((line-name,), label, label-pos, 1, label-align, label-angle)
 }
 
-#let _edge-draw-axis(points, line-name, style, label, label-pos, label-align, label-angle, routing, shift) = {
+#let _resolve-axis-points(a, b, routing, shift) = {
+  if routing == "horizontal" {
+    (
+      (a.at(0), a.at(1) + shift, a.at(2)),
+      (b.at(0), a.at(1) + shift, a.at(2)),
+    )
+  } else {
+    (
+      (a.at(0) + shift, a.at(1), a.at(2)),
+      (a.at(0) + shift, b.at(1), a.at(2)),
+    )
+  }
+}
+
+#let _draw-axis(points, line-name, style, label, label-pos, label-align, label-angle, routing, shift) = {
   assert(points.len() == 2, message: "horizontal/vertical routing requires exactly 2 points")
   let (pt-start, pt-end) = (points.at(0), points.at(1))
 
@@ -287,7 +266,7 @@
     let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
     let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
     let s = cetz.util.resolve-number(ctx, shift)
-    let (a-shifted, target) = _edge-resolve-axis-points(a, b, routing, s)
+    let (a-shifted, target) = _resolve-axis-points(a, b, routing, s)
 
     cetz.draw.line(
       a-shifted,
@@ -296,19 +275,30 @@
       ..style,
     )
 
-    _edge-draw-label((line-name,), label, label-pos, 1, label-align, label-angle)
+    _draw-label((line-name,), label, label-pos, 1, label-align, label-angle)
   })
 }
 
-#let _edge-draw-2w(points, line-name, style, label, label-pos, label-align, label-angle, routing, routing-dir, shift) = {
+#let _draw-2w(
+  points,
+  line-name,
+  style,
+  label,
+  label-pos,
+  label-align,
+  label-angle,
+  routing,
+  routing-dir,
+  shift,
+) = {
   assert(points.len() == 2, message: "2-way routing requires exactly 2 points")
   let (pt-start, pt-end) = (points.at(0), points.at(1))
 
   cetz.draw.get-ctx(ctx => {
     let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
     let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
-    let (s1, s2) = _edge-resolve-shift-pair(ctx, shift)
-    let (a-shifted, b-shifted, elbow) = _edge-resolve-2w-points(a, b, routing, routing-dir, s1, s2)
+    let (s1, s2) = _resolve-shift-pair(ctx, shift)
+    let (a-shifted, b-shifted, elbow) = _resolve-2w-points(a, b, routing, routing-dir, s1, s2)
 
     cetz.draw.line(
       a-shifted,
@@ -323,20 +313,32 @@
       let seg2-name = line-name + "__seg2__"
       cetz.draw.line(a-shifted, elbow, name: seg1-name, stroke: none)
       cetz.draw.line(elbow, b-shifted, name: seg2-name, stroke: none)
-      _edge-draw-label((seg1-name, seg2-name), label, label-pos, 2, label-align, label-angle)
+      _draw-label((seg1-name, seg2-name), label, label-pos, 2, label-align, label-angle)
     }
   })
 }
 
-#let _edge-draw-3w(points, line-name, style, label, label-pos, label-align, label-angle, routing, routing-dir, bend, shift) = {
+#let _draw-3w(
+  points,
+  line-name,
+  style,
+  label,
+  label-pos,
+  label-align,
+  label-angle,
+  routing,
+  routing-dir,
+  bend,
+  shift,
+) = {
   assert(points.len() == 2, message: "3-way routing requires exactly 2 points")
   let (pt-start, pt-end) = (points.at(0), points.at(1))
 
   cetz.draw.get-ctx(ctx => {
     let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
     let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
-    let (sa, sb) = _edge-resolve-shift-pair(ctx, shift)
-    let bend-val = _edge-resolve-3w-bend(ctx, a, b, routing-dir, bend)
+    let (sa, sb) = _resolve-shift-pair(ctx, shift)
+    let bend-val = _resolve-3w-bend(ctx, a, b, routing-dir, bend)
     let _eps = 1e-10
 
     if bend-val < _eps {
@@ -349,7 +351,7 @@
       )
     }
 
-    let (a-shifted, b-shifted, p1, p2) = _edge-resolve-3w-points(a, b, routing, routing-dir, sa, sb, bend-val)
+    let (a-shifted, b-shifted, p1, p2) = _resolve-3w-points(a, b, routing, routing-dir, sa, sb, bend-val)
 
     cetz.draw.line(
       a-shifted,
@@ -367,7 +369,7 @@
       cetz.draw.line(a-shifted, p1, name: seg1-name, stroke: none)
       cetz.draw.line(p1, p2, name: seg2-name, stroke: none)
       cetz.draw.line(p2, b-shifted, name: seg3-name, stroke: none)
-      _edge-draw-label((seg1-name, seg2-name, seg3-name), label, label-pos, 2, label-align, label-angle)
+      _draw-label((seg1-name, seg2-name, seg3-name), label, label-pos, 2, label-align, label-angle)
     }
   })
 }
@@ -464,20 +466,44 @@
   shift: 0,
   ..args,
 ) = {
-  let (points, style, line-name) = _edge-normalize-args(args)
+  let points = args.pos()
+  let style = args.named()
+  let user-name = style.at("name", default: none)
+  let line-name = if user-name != none { user-name } else { "__edge__" }
+  if "name" in style {
+    let _ = style.remove("name")
+  }
 
   cetz.draw.get-ctx(ctx => util.assert-nodes-canvas(ctx))
 
-  let (routing-kind, routing-dir) = _edge-parse-routing(routing)
+  let (routing-kind, routing-dir) = if routing != none and type(routing) == str and routing.starts-with("2w-") {
+    ("2w", routing.slice(3))
+  } else if routing != none and type(routing) == str and routing.starts-with("3w-") {
+    ("3w", routing.slice(3))
+  } else {
+    (none, none)
+  }
 
   if routing == none {
-    _edge-draw-straight(points, line-name, style, label, label-pos, label-align, label-angle)
+    _draw-straight(points, line-name, style, label, label-pos, label-align, label-angle)
   } else if routing == "horizontal" or routing == "vertical" {
-    _edge-draw-axis(points, line-name, style, label, label-pos, label-align, label-angle, routing, shift)
+    _draw-axis(points, line-name, style, label, label-pos, label-align, label-angle, routing, shift)
   } else if routing-kind == "2w" {
-    _edge-draw-2w(points, line-name, style, label, label-pos, label-align, label-angle, routing, routing-dir, shift)
+    _draw-2w(points, line-name, style, label, label-pos, label-align, label-angle, routing, routing-dir, shift)
   } else if routing-kind == "3w" {
-    _edge-draw-3w(points, line-name, style, label, label-pos, label-align, label-angle, routing, routing-dir, bend, shift)
+    _draw-3w(
+      points,
+      line-name,
+      style,
+      label,
+      label-pos,
+      label-align,
+      label-angle,
+      routing,
+      routing-dir,
+      bend,
+      shift,
+    )
   } else {
     panic("edge: unsupported routing " + repr(routing))
   }

@@ -2,7 +2,7 @@
 #import "coord.typ" as coord
 #import "util.typ" as util
 
-#let _node-resolve-body-size(ctx, body, width, height, body-angle) = {
+#let _resolve-body-size(ctx, body, width, height, body-angle) = {
   if width != auto and height != auto {
     return (width, height)
   }
@@ -22,7 +22,7 @@
   )
 }
 
-#let _resolve-node-dict-origin(ctx, origin, width, height, style) = {
+#let _resolve-dict-origin(ctx, origin, width, height, style) = {
   let (dir, spec) = origin.pairs().first()
 
   if dir == "between" {
@@ -52,7 +52,7 @@
   }
 }
 
-#let _node-resolve-rect(ctx, origin, width, height, style) = {
+#let _resolve-rect(ctx, origin, width, height, style) = {
   let origin = if coord.is-node-placement(origin) {
     origin
   } else {
@@ -60,13 +60,13 @@
   }
 
   if type(origin) == dictionary {
-    _resolve-node-dict-origin(ctx, origin, width, height, style)
+    _resolve-dict-origin(ctx, origin, width, height, style)
   } else {
     (style.at("anchor", default: "center"), origin, (rel: (width, height)))
   }
 }
 
-#let _node-resolve-body-placement(name, body-pos, body-dist) = {
+#let _resolve-body-placement(name, body-pos, body-dist) = {
   let body-anc = name + "." + body-pos
   if body-pos == "north" {
     ((rel: (0, -body-dist), to: body-anc), "north")
@@ -150,10 +150,10 @@
 ) = {
   cetz.draw.get-ctx(ctx => {
     let body = box(inset: inset, rotate(body-angle)[#body])
-    let (width, height) = _node-resolve-body-size(ctx, body, width, height, body-angle)
+    let (width, height) = _resolve-body-size(ctx, body, width, height, body-angle)
 
     util.assert-nodes-canvas(ctx)
-    let (anchor, loc, size) = _node-resolve-rect(ctx, origin, width, height, style)
+    let (anchor, loc, size) = _resolve-rect(ctx, origin, width, height, style)
 
     let name = style.at("name", default: "__r__")
     cetz.draw.rect(
@@ -164,7 +164,7 @@
       ..style,
     )
 
-    let (pos, anc) = _node-resolve-body-placement(name, body-pos, body-dist)
+    let (pos, anc) = _resolve-body-placement(name, body-pos, body-dist)
     cetz.draw.content(pos, anchor: anc, align(body-align)[#body])
   })
 }
