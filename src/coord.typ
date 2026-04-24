@@ -1,6 +1,7 @@
 #import "@preview/cetz:0.4.2"
 #import "util.typ" as util
 
+/// Placement keys that position a node outside another named element.
 #let outer-coords = (
   "east-of",
   "west-of",
@@ -12,6 +13,7 @@
   "south-west-of",
 )
 
+/// Placement keys that position a node inside another named element.
 #let inner-coords = (
   "in-north",
   "in-south",
@@ -24,6 +26,9 @@
   "in-center",
 )
 
+/// Normalize a placement value into `(element, distance, alignment)`.
+///
+/// Accepted forms are `name`, `(name, dist)`, or `(name, dist, align)`.
 #let parse-placement-spec(spec) = {
   if type(spec) == array {
     if spec.len() == 2 {
@@ -37,6 +42,10 @@
   }
 }
 
+/// Resolve a node width and height into CeTZ scalar coordinates.
+///
+/// If `relative-to` is given, ratio values are interpreted relative to that
+/// element's size.
 #let resolve-node-size(ctx, width, height, relative-to: none) = {
   let (width, height) = if relative-to != none and (type(width) == ratio or type(height) == ratio) {
     let con-size = util.get-element-size(ctx, relative-to)
@@ -53,6 +62,10 @@
   )
 }
 
+/// Resolve an outer placement like `north-of` or `south-east-of`.
+///
+/// Returns a CeTZ coordinate expression that places a rectangle of the given
+/// `width` and `height` next to the referenced element.
 #let resolve-outer(ctx, dir, el, dist, align, width, height) = {
   let edge = dir.slice(0, -3)
   let edge-pt = cetz.coordinate.resolve(ctx, (name: el, anchor: edge)).at(1)
@@ -102,6 +115,10 @@
   (rel: offset, to: edge-pt)
 }
 
+/// Resolve an inner placement like `in-north` or `in-south-west`.
+///
+/// Returns `(origin, size)` for a rectangle placed inside the referenced
+/// element.
 #let resolve-inner(pos, el, dist, width, height) = {
   let y-start = if pos.starts-with("in-north") {
     -height - dist
@@ -125,12 +142,14 @@
   )
 }
 
+/// Resolve the midpoint between two coordinates or named anchors.
 #let resolve-between(ctx, el-a, el-b) = {
   let pt-a = cetz.coordinate.resolve(ctx, el-a).at(1)
   let pt-b = cetz.coordinate.resolve(ctx, el-b).at(1)
   cetz.vector.scale(cetz.vector.add(pt-a, pt-b), .5)
 }
 
+/// Return whether `c` is a nodes placement dictionary understood by this package.
 #let is-node-placement(c) = {
   (
     type(c) == dictionary
@@ -142,6 +161,10 @@
   )
 }
 
+/// Rewrite nested placement dictionaries into plain CeTZ coordinates.
+///
+/// This enables nested coordinate expressions such as relative coordinates that
+/// themselves point to placement dictionaries.
 #let rewrite-node-origin(ctx, c, width, height) = {
   if is-node-placement(c) {
     let (dir, spec) = c.pairs().first()
@@ -175,6 +198,10 @@
   }
 }
 
+/// Coordinate resolver registered by `nodes.canvas(...)`.
+///
+/// It teaches CeTZ how to interpret placement dictionaries directly as
+/// coordinates.
 #let resolve-node-coordinate(ctx, c) = {
   if type(c) != dictionary or c.len() != 1 {
     return c
