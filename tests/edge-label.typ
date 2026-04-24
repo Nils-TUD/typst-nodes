@@ -1,4 +1,4 @@
-// Test: edges with labels (label, label-pos, label-dist, label-side, label-angle)
+// Test: edges with labels (label, label-pos, label-angle)
 #import "@preview/cetz:0.4.2"
 #import "/src/nodes.typ": canvas, edge, node
 
@@ -10,15 +10,15 @@
   node((-3, -2), [C], name: "c", stroke: black)
   node((3, -2), [D], name: "d", stroke: black)
 
-  // Default label position (50%, north side)
+  // Default label-pos: seg=1, pos=50%, dist=0.3 (north of line)
   edge("a.east", "b.west", label: [default], mark: (end: ">"))
 
-  // Label at 25%, south side
-  edge("c.east", "d.west", label: [25% south], label-pos: (25%, "south"), mark: (end: ">"), stroke: blue)
+  // Label at 25%, south of line (negative dist)
+  edge("c.east", "d.west", label: [25% south], label-pos: (25%, -0.3), mark: (end: ">"), stroke: blue)
 
-  // Label with extra distance from line
-  edge("a.south", "c.north", label: [dist], label-pos: (50%, "west"), label-dist: .3cm, mark: (end: ">"), stroke: red)
+  // Vertical edge: positive dist → east (right of line)
+  edge("a.south", "c.north", label: [east], label-pos: 0.3, mark: (end: ">"), stroke: red)
 
-  // Label with 3-segment routing on the middle segment
-  edge("b.east", "d.east", routing: "3w-east", label: [routed], label-pos: (50%, "east"), mark: (end: ">"), stroke: green)
+  // 3w-east routing: default segment=2 (vertical middle), positive dist → east
+  edge("b.east", "d.east", routing: "3w-east", label: [routed], mark: (end: ">"), stroke: green)
 })

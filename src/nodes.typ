@@ -442,50 +442,129 @@
   })
 }
 
+// Parse a label-pos value into (seg-num, pos-ratio, dist).
+//
+// label-pos may be:
+//   ratio              → (default-seg, ratio, default-dist)
+//   float              → (default-seg, 50%,   float)
+//   (ratio,)           → (default-seg, ratio, default-dist)
+//   (ratio, dist)      → (default-seg, ratio, dist)
+//   (seg, ratio)       → (seg,         ratio, default-dist)
+//   (seg, ratio, dist) → (seg,         ratio, dist)
+//
+// seg is an integer (1-based segment number).
+// ratio is a Typst ratio (e.g. 50%).
+// dist is a plain float in CeTZ units.
+//
+// default-seg and default-dist are supplied by the caller.
+#let _parse-label-pos(label-pos, default-seg: 1, default-dist: 0.3) = {
+  if type(label-pos) == ratio {
+    (default-seg, label-pos, default-dist)
+  } else if type(label-pos) == float or type(label-pos) == int {
+    (default-seg, 50%, float(label-pos))
+  } else if type(label-pos) == array {
+    if label-pos.len() == 1 {
+      (default-seg, label-pos.at(0), default-dist)
+    } else if label-pos.len() == 2 {
+      let (a, b) = (label-pos.at(0), label-pos.at(1))
+      if type(a) == int {
+        // (seg, ratio)
+        (a, b, default-dist)
+      } else {
+        // (ratio, dist)
+        (default-seg, a, float(b))
+      }
+    } else if label-pos.len() == 3 {
+      // (seg, ratio, dist)
+      (label-pos.at(0), label-pos.at(1), float(label-pos.at(2)))
+    } else {
+      panic("label-pos array must have 1–3 elements")
+    }
+  } else {
+    panic("label-pos must be a ratio, float, or array")
+  }
+}
+
+// Place a label alongside a named CeTZ line segment.
+//
+// seg-names  — array of named auxiliary line names, one per segment, in order.
+// seg-num    — 1-based index into seg-names.
+// pos-ratio  — position along the chosen segment (e.g. 50%).
+// dist       — signed perpendicular offset in CeTZ units, using a canonical
+//              convention based on the segment's axis (not its travel direction):
+//                horizontal segment: positive = north (up),  negative = south (down)
+//                vertical segment:   positive = east  (right), negative = west (left)
+//                0 → center of label box placed directly on the line.
 #let _edge-place-label(
-  label-name,
+  seg-names,
   label,
-  label-pos,
-  label-dist,
+  seg-num,
+  pos-ratio,
+  dist,
   label-align,
   label-angle,
   label-inset,
 ) = {
-  // Parse label-pos: can be just a ratio (defaults to "north") or (ratio, side)
-  let (pos-ratio, side) = if type(label-pos) == array {
-    label-pos
-  } else {
-    (label-pos, "north")
-  }
+  let seg-idx = seg-num - 1
+  assert(
+    seg-idx >= 0 and seg-idx < seg-names.len(),
+    message: "label-pos segment number " + repr(seg-num) + " is out of range (edge has " + repr(seg-names.len()) + " segment(s))",
+  )
+  let seg-name = seg-names.at(seg-idx)
 
   cetz.draw.get-ctx(ctx => {
     let label-content = box(inset: label-inset, rotate(label-angle)[#label])
 
-    // Resolve the position along the line path
-    let pos-pct = float(pos-ratio) * 100
-    let pt = cetz.coordinate.resolve(ctx, (name: label-name, anchor: repr(pos-pct) + "%")).at(1)
+    // Resolve position along the segment.
+    // CeTZ percent anchors require an integer string like "30%", not "30.0%".
+    let pos-pct = calc.round(float(pos-ratio) * 100)
+    let pt = cetz.coordinate.resolve(ctx, (name: seg-name, anchor: str(pos-pct) + "%")).at(1)
 
-    // The side determines the direction to offset and the anchor used to
-    // place the label box flush against the line point.
-    //   side "north" -> label sits above -> anchor its "south" edge at the point
-    //   side "south" -> label sits below -> anchor its "north" edge
-    //   side "west"  -> label sits left  -> anchor its "east" edge
-    //   side "east"  -> label sits right -> anchor its "west" edge
-    let (anchor, nx, ny) = if side == "north" {
-      ("south", 0, 1)
-    } else if side == "south" {
-      ("north", 0, -1)
-    } else if side == "west" {
-      ("east", -1, 0)
-    } else if side == "east" {
-      ("west", 1, 0)
+    if dist == 0.0 {
+      cetz.draw.content(pt, anchor: "center", align(label-align)[#label-content])
+    } else {
+      // Determine the segment's axis from its endpoints so we can apply a
+      // canonical sign convention that is independent of travel direction:
+      //   horizontal segment → positive dist = north, negative = south
+      //   vertical segment   → positive dist = east,  negative = west
+      //   diagonal           → fall back to left-hand normal of travel direction
+      let p0 = cetz.coordinate.resolve(ctx, (name: seg-name, anchor: "0%")).at(1)
+      let p1 = cetz.coordinate.resolve(ctx, (name: seg-name, anchor: "100%")).at(1)
+      let dx = calc.abs(p1.at(0) - p0.at(0))
+      let dy = calc.abs(p1.at(1) - p0.at(1))
+      let _eps = 1e-6
+
+      let (anchor, offset-x, offset-y) = if dy < _eps {
+        // Horizontal segment: canonical normal is (0, 1) = north
+        if dist > 0 { ("south", 0.0,  dist) }
+        else        { ("north", 0.0,  dist) }
+      } else if dx < _eps {
+        // Vertical segment: canonical normal is (1, 0) = east
+        if dist > 0 { ("west",  dist, 0.0) }
+        else        { ("east",  dist, 0.0) }
+      } else {
+        // Diagonal: left-hand normal of travel direction
+        let raw-dx = p1.at(0) - p0.at(0)
+        let raw-dy = p1.at(1) - p0.at(1)
+        let len = calc.sqrt(raw-dx * raw-dx + raw-dy * raw-dy)
+        let nx = -raw-dy / len
+        let ny =  raw-dx / len
+        let ox = dist * nx
+        let oy = dist * ny
+        let anc = if calc.abs(nx) >= calc.abs(ny) {
+          if (nx > 0) == (dist > 0) { "west" } else { "east" }
+        } else {
+          if (ny > 0) == (dist > 0) { "south" } else { "north" }
+        }
+        (anc, ox, oy)
+      }
+
+      let label-pt = (pt.at(0) + offset-x, pt.at(1) + offset-y, pt.at(2))
+      cetz.draw.content(label-pt, anchor: anchor, align(label-align)[#label-content])
     }
+  })
+}
 
-    // Apply the additional perpendicular distance
-    let dist = cetz.util.resolve-number(ctx, label-dist)
-    let label-pt = (pt.at(0) + nx * dist, pt.at(1) + ny * dist, pt.at(2))
-
-    cetz.draw.content(label-pt, anchor: anchor, align(label-align)[#label-content])
   })
 }
 
@@ -517,12 +596,32 @@
 ///
 /// - `label` (`content` or `none`) -- Label to render alongside the edge.
 ///   Defaults to `none`.
-/// - `label-pos` (`ratio` or `array`) -- Position of the label along the
-///   line. Either a bare ratio (e.g. `50%`) which defaults to the `"north"`
-///   side, or a two-element array `(ratio, side)` where `side` is one of
-///   `"north"`, `"south"`, `"east"`, `"west"`. Defaults to `(50%, "north")`.
-/// - `label-dist` (`length`) -- Perpendicular distance between the line and
-///   the label. Defaults to `0`.
+/// - `label-pos` -- Controls which segment the label appears on, where along
+///   it, and how far from it. Accepts the following forms (all components have
+///   defaults: segment = last segment of the route, position = `50%`, distance
+///   = `0.3` CeTZ units):
+///   - bare `ratio` (e.g. `50%`) — position on the default segment, default
+///     distance.
+///   - bare `float` (e.g. `0.5`) — default segment, default position, given
+///     distance.
+///   - `(ratio,)` — position on the default segment, default distance.
+///   - `(ratio, dist)` — position and distance on the default segment.
+///   - `(seg, ratio)` — explicit 1-based segment number and position, default
+///     distance.
+///   - `(seg, ratio, dist)` — all three explicit.
+///
+///   `dist` is a signed CeTZ-unit offset perpendicular to the segment:
+///   - `dist > 0` → label north of a horizontal segment / east of a vertical
+///     segment; the near edge of the box is `dist` from the line.
+///   - `dist < 0` → label south of a horizontal segment / west of a vertical
+///     segment; the near edge of the box is `|dist|` from the line.
+///   - `dist = 0` → center of the label box placed directly on the line.
+///
+///   For straight/horizontal/vertical routing there is 1 segment. For `2w-*`
+///   routing there are 2 segments; the default is segment 2 (the last). For
+///   `3w-*` routing there are 3 segments; the default is segment 2 (the
+///   middle). Defaults to `0.3` (default segment, 50%, 0.3 CeTZ units north /
+///   east of the line).
 /// - `label-align` (`alignment`) -- Typst alignment applied to the label
 ///   content. Defaults to `center`.
 /// - `label-angle` (`angle`) -- Rotation applied to the label content.
@@ -545,8 +644,7 @@
 ///   (e.g. `name`, `stroke`, `mark`, …).
 #let edge(
   label: none,
-  label-pos: (50%, "north"),
-  label-dist: 0,
+  label-pos: 0.3,
   label-align: center,
   label-angle: 0deg,
   label-inset: .3em,
@@ -586,7 +684,8 @@
     )
 
     if label != none {
-      _edge-place-label(line-name, label, label-pos, label-dist, label-align, label-angle, label-inset)
+      let (seg-num, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: 1, default-dist: 0.3)
+      _edge-place-label((line-name,), label, seg-num, pos-ratio, dist, label-align, label-angle, label-inset)
     }
   } else if routing == "horizontal" or routing == "vertical" {
     // --- Single straight segment (horizontal or vertical) ---
@@ -625,7 +724,8 @@
       )
 
       if label != none {
-        _edge-place-label(line-name, label, label-pos, label-dist, label-align, label-angle, label-inset)
+        let (seg-num, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: 1, default-dist: 0.3)
+        _edge-place-label((line-name,), label, seg-num, pos-ratio, dist, label-align, label-angle, label-inset)
       }
     })
   } else if routing-kind == "2w" {
@@ -643,7 +743,7 @@
         (s, s)
       }
 
-      let (a-shifted, b-shifted, elbow, label-start, label-end) = if routing-dir == "north" or routing-dir == "south" {
+      let (a-shifted, b-shifted, elbow) = if routing-dir == "north" or routing-dir == "south" {
         let ax = a.at(0) + s1
         let bx = b.at(0)
         let ay = a.at(1)
@@ -651,7 +751,7 @@
         let a-shifted = (ax, ay, a.at(2))
         let elbow = (ax, by, a.at(2))
         let b-shifted = (bx, by, b.at(2))
-        (a-shifted, b-shifted, elbow, elbow, (bx, by, a.at(2)))
+        (a-shifted, b-shifted, elbow)
       } else if routing-dir == "east" or routing-dir == "west" {
         let ay = a.at(1) + s1
         let by = b.at(1)
@@ -660,7 +760,7 @@
         let a-shifted = (ax, ay, a.at(2))
         let elbow = (bx, ay, a.at(2))
         let b-shifted = (bx, by, b.at(2))
-        (a-shifted, b-shifted, elbow, elbow, (bx, by, a.at(2)))
+        (a-shifted, b-shifted, elbow)
       } else {
         panic("edge: unsupported 2-way routing \"" + routing + "\"")
       }
@@ -674,9 +774,18 @@
       )
 
       if label != none {
-        let seg-name = line-name + "__seg2__"
-        cetz.draw.line(label-start, label-end, name: seg-name, stroke: none)
-        _edge-place-label(seg-name, label, label-pos, label-dist, label-align, label-angle, label-inset)
+        // Draw invisible auxiliary lines for each segment so the user can
+        // reference them by number in label-pos.
+        let seg1-name = line-name + "__seg1__"
+        let seg2-name = line-name + "__seg2__"
+        cetz.draw.line(a-shifted, elbow,     name: seg1-name, stroke: none)
+        cetz.draw.line(elbow,     b-shifted, name: seg2-name, stroke: none)
+        let (seg-num, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: 2, default-dist: 0.3)
+        _edge-place-label(
+          (seg1-name, seg2-name),
+          label, seg-num, pos-ratio, dist,
+          label-align, label-angle, label-inset,
+        )
       }
     })
   } else if routing-kind == "3w" {
@@ -799,11 +908,20 @@
       )
 
       if label != none {
-        // Draw an invisible line for the middle segment so we can anchor
-        // the label percentage to it rather than the full path.
-        let mid-name = line-name + "__mid__"
-        cetz.draw.line(p1, p2, name: mid-name, stroke: none)
-        _edge-place-label(mid-name, label, label-pos, label-dist, label-align, label-angle, label-inset)
+        // Draw invisible auxiliary lines for each of the 3 segments so the
+        // user can reference them by number in label-pos.
+        let seg1-name = line-name + "__seg1__"
+        let seg2-name = line-name + "__seg2__"
+        let seg3-name = line-name + "__seg3__"
+        cetz.draw.line(a-shifted, p1,        name: seg1-name, stroke: none)
+        cetz.draw.line(p1,        p2,        name: seg2-name, stroke: none)
+        cetz.draw.line(p2,        b-shifted, name: seg3-name, stroke: none)
+        let (seg-num, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: 2, default-dist: 0.3)
+        _edge-place-label(
+          (seg1-name, seg2-name, seg3-name),
+          label, seg-num, pos-ratio, dist,
+          label-align, label-angle, label-inset,
+        )
       }
     })
   } else {

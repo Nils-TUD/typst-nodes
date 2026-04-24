@@ -134,11 +134,10 @@ edge("a.south", "b.south", routing: "3w-south", shift: (-.2, .2), mark: (end: ">
 // Label at 50% along the edge, on the north side (default)
 edge("a.east", "b.west", label: [A to B], mark: (end: ">"))
 
-// Label at 25%, south side, with extra distance from the line
+// Label at 25%, south side (negative dist = south for horizontal edge)
 edge("c.east", "d.west",
   label: [25% south],
-  label-pos: (25%, "south"),
-  label-dist: .2cm,
+  label-pos: (25%, -0.3),
   mark: (end: ">"),
 )
 ```

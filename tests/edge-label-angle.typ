@@ -19,12 +19,12 @@
   edge("c.east", "d.west", label: lbl[90°], label-angle: 90deg, stroke: blue, mark: (end: ">"))
 
   // label-inset: large inset creates a bigger box around the label
-  edge("a.south", "c.north", label: lbl[inset], label-pos: (50%, "east"), label-inset: .5cm, stroke: red, mark: (
+  edge("a.south", "c.north", label: lbl[inset], label-pos: .2, label-inset: .2cm, stroke: red, mark: (
     end: ">",
   ))
 
   // label-inset: zero — label sits flush against the line
-  edge("b.south", "d.north", label: lbl[0 inset], label-pos: (30%, "west"), label-inset: 0pt, stroke: green, mark: (
+  edge("b.south", "d.north", label: lbl[0 inset], label-pos: (30%, .3), label-inset: 0pt, stroke: green, mark: (
     end: ">",
   ))
 })

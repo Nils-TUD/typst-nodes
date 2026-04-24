@@ -53,18 +53,18 @@
   serv((north-of: ("kernel", gap * 3, "left")), [Network], name: "net")
   serv((north-of: ("kernel", gap * 3, "right")), [Driver], name: "drv")
 
-  for (node, side, shift, no) in (
-    ("net", "west", -.5, [1]),
-    ("drv", "east", .5, [2]),
-    ("drv", "west", -.5, [3]),
-    ("net", "east", .5, [4]),
+  for (node, dist, shift, no) in (
+    ("net", -.1, -.5, [1]),
+    ("drv", .1, .5, [2]),
+    ("drv", -.1, -.5, [3]),
+    ("net", .1, .5, [4]),
   ) {
-    let reverse = side == "east"
+    let reverse = dist == .1
     edge(
       node + ".south",
       "kernel.north",
       label: box-no(no),
-      label-pos: (50%, side),
+      label-pos: (50%, dist),
       routing: "vertical",
       shift: shift,
       mark: if reverse { (start: ">") } else { (end: ">") },
