@@ -4,7 +4,7 @@
 // edge and the new node's edge, for all four cardinal directions.
 // Also tests dist=0 (touching edges).
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": canvas, node
+#import "/src/lib.typ": canvas, node
 
 #set page(width: 10cm, height: 10cm, margin: 5pt)
 

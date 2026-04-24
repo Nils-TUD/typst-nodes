@@ -1,7 +1,7 @@
 // Test: nodes placed with outer directional positioning
 // (east-of, west-of, north-of, south-of, and diagonal corners)
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": canvas, node
+#import "/src/lib.typ": canvas, node
 
 #set page(width: 8cm, height: 8cm, margin: 5pt)
 

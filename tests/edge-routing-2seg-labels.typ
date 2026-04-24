@@ -5,7 +5,7 @@
 // Both 2w-north and 2w-south with the same positive dist must place their
 // labels on the same (north) side of the horizontal second segment.
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": canvas, edge, node
+#import "/src/lib.typ": canvas, edge, node
 
 #set page(width: 12cm, height: 10cm, margin: 5pt)
 

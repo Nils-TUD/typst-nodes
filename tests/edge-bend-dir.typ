@@ -1,6 +1,6 @@
 // Test: 3-segment routing with explicit bend modes.
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": canvas, edge, node
+#import "/src/lib.typ": canvas, edge, node
 
 #set page(width: 12cm, height: 10cm, margin: 5pt)
 

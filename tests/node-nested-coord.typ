@@ -1,6 +1,6 @@
 // Test: nested nodes coordinates inside standard CeTZ coordinate expressions
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": canvas, node
+#import "/src/lib.typ": canvas, node
 
 #set page(width: 9cm, height: 6cm, margin: 5pt)
 

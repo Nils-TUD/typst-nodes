@@ -4,7 +4,7 @@
 // (instead of centered), offset outward by body-dist.
 // Also tests body-align (left/center/right alignment of the label text).
 #import "@preview/cetz:0.4.2"
-#import "/src/nodes.typ": canvas, node
+#import "/src/lib.typ": canvas, node
 
 #set page(width: 10cm, height: 10cm, margin: 5pt)
 
