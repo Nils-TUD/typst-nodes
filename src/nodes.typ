@@ -197,10 +197,14 @@
 }
 
 #let _is-node-placement(c) = {
-  type(c) == dictionary and c.len() == 1 and {
-    let dir = c.keys().first()
-    dir in _outer-coords or dir in _inner-coords or dir == "between"
-  }
+  (
+    type(c) == dictionary
+      and c.len() == 1
+      and {
+        let dir = c.keys().first()
+        dir in _outer-coords or dir in _inner-coords or dir == "between"
+      }
+  )
 }
 
 #let _rewrite-node-origin(ctx, c, width, height) = {
@@ -516,7 +520,11 @@
   let seg-idx = seg-num - 1
   assert(
     seg-idx >= 0 and seg-idx < seg-names.len(),
-    message: "label-pos segment number " + repr(seg-num) + " is out of range (edge has " + repr(seg-names.len()) + " segment(s))",
+    message: "label-pos segment number "
+      + repr(seg-num)
+      + " is out of range (edge has "
+      + repr(seg-names.len())
+      + " segment(s))",
   )
   let seg-name = seg-names.at(seg-idx)
 
@@ -593,10 +601,18 @@
 /// - `"3w-north"`, `"3w-south"`, `"3w-east"`, `"3w-west"`: a 3-segment
 ///   orthogonal route. The middle segment runs perpendicular to the named
 ///   direction (horizontal for north/south, vertical for east/west). `bend`
-///   controls how far the route bends before turning; defaults to half the
-///   span between the endpoints. `shift` offsets each endpoint along the
-///   middle segment direction and may be a single value or a `(shift-a,
-///   shift-b)` array for independent per-endpoint control.
+///   controls how far the route bends before turning. `auto` (the default)
+///   chooses half the x distance for `3w-north`/`3w-south` when the endpoints
+///   share y and otherwise half the y distance; `3w-east`/`3w-west`
+///   analogously choose half the y distance when the endpoints share x and
+///   otherwise half the x distance. `"same-dir"` always keeps both outer legs
+///   moving in the routing direction, so it uses half the y distance for
+///   `3w-north`/`3w-south` and half the x distance for `3w-east`/`3w-west`.
+///   `"opposite-dir"` instead returns to the starting axis, so it uses half
+///   the x distance for `3w-north`/`3w-south` and half the y distance for
+///   `3w-east`/`3w-west`. `shift` offsets each endpoint along the middle
+///   segment direction and may be a single value or a `(shift-a, shift-b)`
+///   array for independent per-endpoint control.
 ///
 /// - `label` (`content` or `none`) -- Label to render alongside the edge.
 ///   Defaults to `none`.
@@ -634,8 +650,10 @@
 ///   `"horizontal"`, `"vertical"`, `"2w-north"`, `"2w-south"`, `"2w-east"`,
 ///   `"2w-west"`, `"3w-north"`, `"3w-south"`, `"3w-east"`, `"3w-west"`.
 ///   Defaults to `none`.
-/// - `bend` (`auto` or `length`) -- Bend distance for 3-segment routing.
-///   Must be non-zero when supplied explicitly. Defaults to `auto`.
+/// - `bend` (`auto` or `"same-dir"` or `"opposite-dir"` or `length`) -- Bend
+///   distance for 3-segment routing. `"same-dir"` keeps both outer legs moving
+///   in the routing direction; `"opposite-dir"` returns to the starting axis.
+///   Must be non-zero when supplied explicitly as a length. Defaults to `auto`.
 /// - `shift` (`length` or `array`) -- Shift applied to the route segments. For
 ///   2-segment routing this may be a single value or `(shift-first,
 ///   shift-second)`.
@@ -779,13 +797,17 @@
         // reference them by number in label-pos.
         let seg1-name = line-name + "__seg1__"
         let seg2-name = line-name + "__seg2__"
-        cetz.draw.line(a-shifted, elbow,     name: seg1-name, stroke: none)
-        cetz.draw.line(elbow,     b-shifted, name: seg2-name, stroke: none)
+        cetz.draw.line(a-shifted, elbow, name: seg1-name, stroke: none)
+        cetz.draw.line(elbow, b-shifted, name: seg2-name, stroke: none)
         let (seg-num, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: 2, default-dist: 0.3)
         _edge-place-label(
           (seg1-name, seg2-name),
-          label, seg-num, pos-ratio, dist,
-          label-align, label-angle,
+          label,
+          seg-num,
+          pos-ratio,
+          dist,
+          label-align,
+          label-angle,
         )
       }
     })
@@ -819,36 +841,45 @@
       // Use an epsilon threshold so we catch those cases too.
       let _eps = 1e-10
       let bend-val = if bend != auto {
-        let v = cetz.util.resolve-number(ctx, bend)
-        assert(v != 0, message: "bend must be non-zero")
-        v
-      } else {
-        // Default: half the span in the routing direction
-        if routing-dir == "south" or routing-dir == "north" {
-          let span = calc.abs(b.at(0) - a.at(0))
-          if span < _eps {
-            panic(
-              "edge: routing \""
-                + routing
-                + "\" requires the two endpoints "
-                + "to differ in X, but both have the same X coordinate. "
-                + "Either use a different routing direction or supply an explicit bend value.",
-            )
-          }
+        if type(bend) == str {
+          assert(
+            bend == "same-dir" or bend == "opposite-dir",
+            message: "bend must be auto, \"same-dir\", \"opposite-dir\", or a non-zero length",
+          )
+
+          let primary-y-axis = routing-dir == "south" or routing-dir == "north"
+          let use-y-span = if bend == "same-dir" { primary-y-axis } else { not primary-y-axis }
+          let span = if use-y-span { calc.abs(b.at(1) - a.at(1)) } else { calc.abs(b.at(0) - a.at(0)) }
           span / 2
         } else {
-          let span = calc.abs(b.at(1) - a.at(1))
-          if span < _eps {
-            panic(
-              "edge: routing \""
-                + routing
-                + "\" requires the two endpoints "
-                + "to differ in Y, but both have the same Y coordinate. "
-                + "Either use a different routing direction or supply an explicit bend value.",
-            )
-          }
-          span / 2
+          let v = cetz.util.resolve-number(ctx, bend)
+          assert(v != 0, message: "bend must be non-zero")
+          v
         }
+      } else {
+        // Default: for north/south routing, use half the x distance when the
+        // endpoints end up at the same y position; otherwise use half the y
+        // distance. For east/west routing, analogously use half the y distance
+        // when the endpoints share x; otherwise half the x distance.
+        let primary-y-axis = routing-dir == "south" or routing-dir == "north"
+        let same-axis = if primary-y-axis {
+          calc.abs(b.at(1) - a.at(1)) < _eps
+        } else {
+          calc.abs(b.at(0) - a.at(0)) < _eps
+        }
+        let use-y-span = if primary-y-axis { not same-axis } else { same-axis }
+        let span = if use-y-span { calc.abs(b.at(1) - a.at(1)) } else { calc.abs(b.at(0) - a.at(0)) }
+        span / 2
+      }
+
+      if bend-val < _eps {
+        panic(
+          "edge: routing \""
+            + routing
+            + "\" requires the two endpoints to differ in X/Y, "
+            + "but both have the same X/Y coordinate. Either use a different routing "
+            + "direction or supply an explicit (and larger) bend value.",
+        )
       }
 
       // Compute the 2 intermediate waypoints, applying shift to the x (for
@@ -914,14 +945,18 @@
         let seg1-name = line-name + "__seg1__"
         let seg2-name = line-name + "__seg2__"
         let seg3-name = line-name + "__seg3__"
-        cetz.draw.line(a-shifted, p1,        name: seg1-name, stroke: none)
-        cetz.draw.line(p1,        p2,        name: seg2-name, stroke: none)
-        cetz.draw.line(p2,        b-shifted, name: seg3-name, stroke: none)
+        cetz.draw.line(a-shifted, p1, name: seg1-name, stroke: none)
+        cetz.draw.line(p1, p2, name: seg2-name, stroke: none)
+        cetz.draw.line(p2, b-shifted, name: seg3-name, stroke: none)
         let (seg-num, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: 2, default-dist: 0.3)
         _edge-place-label(
           (seg1-name, seg2-name, seg3-name),
-          label, seg-num, pos-ratio, dist,
-          label-align, label-angle,
+          label,
+          seg-num,
+          pos-ratio,
+          dist,
+          label-align,
+          label-angle,
         )
       }
     })

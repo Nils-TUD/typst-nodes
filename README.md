@@ -115,11 +115,13 @@ edge("a.north", "b.east", routing: "2w-north", shift: (.3cm, -.2cm), mark: (end:
 
 #### 3-segment orthogonal routing
 
-Routes the edge out in a given direction, runs a horizontal or vertical middle segment, then turns back to the destination. Use the explicit `3w-*` routing names. `bend` controls how far the route extends before turning (defaults to half the span between endpoints):
+Routes the edge out in a given direction, runs a horizontal or vertical middle segment, then turns back to the destination. Use the explicit `3w-*` routing names. `bend` controls how far the route extends before turning. `auto` (the default) uses half the x distance for `3w-north`/`3w-south` when the endpoints share y and otherwise half the y distance; `3w-east`/`3w-west` analogously use half the y distance when the endpoints share x and otherwise half the x distance. `bend: "same-dir"` keeps both outer legs moving in the routing direction, while `bend: "opposite-dir"` returns to the starting axis:
 
 ```typst
 edge("a.south", "b.south", routing: "3w-south", bend: .5, mark: (end: ">"))
 edge("a.east",  "c.east",  routing: "3w-east",  bend: .8, mark: (end: ">"), stroke: red)
+edge("a.south", "c.north", routing: "3w-south", bend: "same-dir", mark: (end: ">"), stroke: blue)
+edge("a.south", "c.north", routing: "3w-south", bend: "opposite-dir", mark: (end: ">"), stroke: green)
 ```
 
 `shift` offsets each endpoint along the middle segment. Pass an array for independent per-endpoint control:

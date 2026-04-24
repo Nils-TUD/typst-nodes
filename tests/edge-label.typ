@@ -20,5 +20,13 @@
   edge("a.south", "c.north", label: [east], label-pos: 0.3, mark: (end: ">"), stroke: red)
 
   // 3w-east routing: default segment=2 (vertical middle), positive dist → east
-  edge("b.east", "d.east", routing: "3w-east", label: [routed], mark: (end: ">"), stroke: green)
+  edge(
+    "b.east",
+    "d.east",
+    routing: "3w-east",
+    bend: "opposite-dir",
+    label: [routed],
+    mark: (end: ">"),
+    stroke: green,
+  )
 })
