@@ -142,6 +142,14 @@ edge("c.east", "d.west",
   label-pos: (25%, -0.3),
   mark: (end: ">"),
 )
+
+// Rotate the label to follow the selected edge segment
+edge("a.south", "c.north",
+  label: [diagonal],
+  label-angle: auto,
+  label-pos: (60%, 0.2),
+  mark: (end: ">"),
+)
 ```
 
 ## Running the tests

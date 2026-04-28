@@ -44,10 +44,21 @@
 #let _rotated-rect-support(width, height, angle, nx, ny) = {
   let cos-a = calc.cos(angle)
   let sin-a = calc.sin(angle)
-  let width-support = calc.abs(nx * cos-a + ny * sin-a) * width / 2
-  let height-support = calc.abs(-nx * sin-a + ny * cos-a) * height / 2
+  let width-support = calc.abs(nx * cos-a - ny * sin-a) * width / 2
+  let height-support = calc.abs(nx * sin-a + ny * cos-a) * height / 2
 
   width-support + height-support
+}
+
+#let _resolve-label-angle(p0, p1, label-angle) = {
+  if label-angle == auto {
+    let dx = p1.at(0) - p0.at(0)
+    let dy = p1.at(1) - p0.at(1)
+    let angle = calc.atan2(dx, -dy)
+    if calc.abs(angle) > 90deg and calc.abs(angle) < 180deg { angle + 180deg } else { angle }
+  } else {
+    label-angle
+  }
 }
 
 // Place a label alongside a named CeTZ line segment.
@@ -81,16 +92,17 @@
   let seg-name = seg-names.at(seg-idx)
 
   cetz.draw.get-ctx(ctx => {
-    let label-content = rotate(label-angle)[#label]
+    let p0 = cetz.coordinate.resolve(ctx, (name: seg-name, anchor: "0%")).at(1)
+    let p1 = cetz.coordinate.resolve(ctx, (name: seg-name, anchor: "100%")).at(1)
+    let resolved-label-angle = _resolve-label-angle(p0, p1, label-angle)
+    let label-content = rotate(resolved-label-angle)[#label]
     let pos-pct = calc.round(float(pos-ratio) * 100)
     let pt = cetz.coordinate.resolve(ctx, (name: seg-name, anchor: str(pos-pct) + "%")).at(1)
 
     if dist == 0.0 {
       cetz.draw.content(pt, anchor: "center", align(label-align)[#label-content])
     } else {
-      let (label-width, label-height) = cetz.util.measure(ctx, label-content)
-      let p0 = cetz.coordinate.resolve(ctx, (name: seg-name, anchor: "0%")).at(1)
-      let p1 = cetz.coordinate.resolve(ctx, (name: seg-name, anchor: "100%")).at(1)
+      let (label-width, label-height) = cetz.util.measure(ctx, label)
       let dx = calc.abs(p1.at(0) - p0.at(0))
       let dy = calc.abs(p1.at(1) - p0.at(1))
       let _eps = 1e-6
@@ -107,7 +119,7 @@
       }
 
       let sign = if dist > 0 { 1.0 } else { -1.0 }
-      let support = _rotated-rect-support(label-width, label-height, label-angle, normal-x, normal-y)
+      let support = _rotated-rect-support(label-width, label-height, resolved-label-angle, normal-x, normal-y)
       let offset = calc.abs(dist) + support
       let label-pt = (
         pt.at(0) + sign * normal-x * offset,
@@ -438,8 +450,9 @@
 ///   east of the line).
 /// - `label-align` (`alignment`) -- Typst alignment applied to the label
 ///   content. Defaults to `center`.
-/// - `label-angle` (`angle`) -- Rotation applied to the label content.
-///   Defaults to `0deg`.
+/// - `label-angle` (`angle` or `auto`) -- Rotation applied to the label
+///   content. `auto` uses the angle of the selected label segment, so the label
+///   follows the edge direction. Defaults to `0deg`.
 /// - `routing` (`none` or `string`) -- Routing strategy. One of `none`,
 ///   `"horizontal"`, `"vertical"`, `"2w-north"`, `"2w-south"`, `"2w-east"`,
 ///   `"2w-west"`, `"3w-north"`, `"3w-south"`, `"3w-east"`, `"3w-west"`.
