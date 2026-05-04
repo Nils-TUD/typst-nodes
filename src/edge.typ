@@ -323,8 +323,8 @@
     if label != none {
       let seg1-name = line-name + "__seg1__"
       let seg2-name = line-name + "__seg2__"
-      cetz.draw.line(a-shifted, elbow, name: seg1-name, stroke: none)
-      cetz.draw.line(elbow, b-shifted, name: seg2-name, stroke: none)
+      cetz.draw.line(a-shifted, elbow, name: seg1-name, stroke: (thickness: 0pt))
+      cetz.draw.line(elbow, b-shifted, name: seg2-name, stroke: (thickness: 0pt))
       _draw-label((seg1-name, seg2-name), label, label-pos, 2, label-align, label-angle)
     }
   })
@@ -378,9 +378,9 @@
       let seg1-name = line-name + "__seg1__"
       let seg2-name = line-name + "__seg2__"
       let seg3-name = line-name + "__seg3__"
-      cetz.draw.line(a-shifted, p1, name: seg1-name, stroke: none)
-      cetz.draw.line(p1, p2, name: seg2-name, stroke: none)
-      cetz.draw.line(p2, b-shifted, name: seg3-name, stroke: none)
+      cetz.draw.line(a-shifted, p1, name: seg1-name, stroke: (thickness: 0pt))
+      cetz.draw.line(p1, p2, name: seg2-name, stroke: (thickness: 0pt))
+      cetz.draw.line(p2, b-shifted, name: seg3-name, stroke: (thickness: 0pt))
       _draw-label((seg1-name, seg2-name, seg3-name), label, label-pos, 2, label-align, label-angle)
     }
   })
