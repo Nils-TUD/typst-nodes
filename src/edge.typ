@@ -256,6 +256,47 @@
   _draw-label((line-name,), label, label-pos, 1, label-align, label-angle)
 }
 
+// Find the intersection between line a-b next to a
+// if no intersection could be found, return a.
+// This is adapted from cetz/src/draw/shapes.typ
+#let _element-line-intersection(ctx, elem, a, b) = {
+  import cetz: intersection
+  // Vectors a and b are not transformed yet, but the vectors of the
+  // drawable are.
+  let (ta, tb) = cetz.util.apply-transform(ctx.transform, a, b)
+
+  let pts = ()
+  for d in elem.at("drawables", default: ()).filter(d => d.type == "path") {
+    pts += intersection.line-path(ta, tb, d)
+  }
+  return if pts == () {
+    a
+  } else {
+    // Find the nearest point to tb (the neighbor)
+    let pt = cetz.util.sort-points-by-distance(tb, pts).first()
+
+    // Reverse the transformation
+    return cetz.util.revert-transform(ctx.transform, pt)
+  }
+}
+
+// Returns true if `name` is an element name with the default anchor
+#let _is-element-with-def-anchor(name) = {
+  if type(name) != str {
+    return false
+  }
+  return not (
+    name.ends-with(".north")
+      or name.ends-with(".south")
+      or name.ends-with(".west")
+      or name.ends-with(".east")
+      or name.ends-with(".north-west")
+      or name.ends-with(".north-east")
+      or name.ends-with(".south-west")
+      or name.ends-with(".south-east")
+  )
+}
+
 #let _resolve-axis-points(a, b, routing, shift) = {
   if routing == "horizontal" {
     (
@@ -275,10 +316,37 @@
   let (pt-start, pt-end) = (points.at(0), points.at(1))
 
   cetz.draw.get-ctx(ctx => {
-    let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
-    let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
+    let first-is-elem = _is-element-with-def-anchor(pt-start)
+    let last-is-elem = _is-element-with-def-anchor(pt-end)
+
+    let (ctx, a, b) = cetz.coordinate.resolve(ctx, pt-start, pt-end)
     let s = cetz.util.resolve-number(ctx, shift)
+
+    // First, determine the axis points using raw resolved coordinates (centers)
     let (a-shifted, target) = _resolve-axis-points(a, b, routing, s)
+
+    // If start/end are elements, we want to find the intersection with the border
+    // but the neighbor for 'a' is 'target', and for 'b' (used for target) it is 'a-shifted'.
+    if first-is-elem {
+      let elem = ctx.nodes.at(pt-start)
+      a = _element-line-intersection(ctx, elem, a, target)
+      // Recalculate shifted start
+      a-shifted = if routing == "horizontal" {
+        (a.at(0), a.at(1) + s, a.at(2))
+      } else {
+        (a.at(0) + s, a.at(1), a.at(2))
+      }
+    }
+    if last-is-elem {
+      let elem = ctx.nodes.at(pt-end)
+      b = _element-line-intersection(ctx, elem, b, a-shifted)
+      // Recalculate target
+      target = if routing == "horizontal" {
+        (b.at(0), a.at(1) + s, a.at(2))
+      } else {
+        (a.at(0) + s, b.at(1), a.at(2))
+      }
+    }
 
     cetz.draw.line(
       a-shifted,
@@ -307,10 +375,40 @@
   let (pt-start, pt-end) = (points.at(0), points.at(1))
 
   cetz.draw.get-ctx(ctx => {
-    let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
-    let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
+    let first-is-elem = _is-element-with-def-anchor(pt-start)
+    let last-is-elem = _is-element-with-def-anchor(pt-end)
+
+    let (ctx, a, b) = cetz.coordinate.resolve(ctx, pt-start, pt-end)
     let (s1, s2) = _resolve-shift-pair(ctx, shift)
+
+    // Preliminary elbows and shifts using centers
     let (a-shifted, b-shifted, elbow) = _resolve-2w-points(a, b, routing, routing-dir, s1, s2)
+
+    if first-is-elem {
+      let elem = ctx.nodes.at(pt-start)
+      a = _element-line-intersection(ctx, elem, a, elbow)
+      // Recalculate a-shifted (elbow depends on a-shifted and b-shifted, but
+      // in 2w-north/south, elbow-x = a-shifted-x, elbow-y = b-shifted-y)
+      if routing-dir == "north" or routing-dir == "south" {
+        a-shifted = (a.at(0) + s1, a.at(1), a.at(2))
+        elbow = (a-shifted.at(0), elbow.at(1), a-shifted.at(2))
+      } else {
+        a-shifted = (a.at(0), a.at(1) + s1, a.at(2))
+        elbow = (elbow.at(0), a-shifted.at(1), a-shifted.at(2))
+      }
+    }
+    if last-is-elem {
+      let elem = ctx.nodes.at(pt-end)
+      b = _element-line-intersection(ctx, elem, b, elbow)
+      // Recalculate b-shifted
+      if routing-dir == "north" or routing-dir == "south" {
+        b-shifted = (b.at(0), b.at(1) + s2, b.at(2))
+        elbow = (elbow.at(0), b-shifted.at(1), b-shifted.at(2))
+      } else {
+        b-shifted = (b.at(0) + s2, b.at(1), b.at(2))
+        elbow = (b-shifted.at(0), elbow.at(1), b-shifted.at(2))
+      }
+    }
 
     cetz.draw.line(
       a-shifted,
@@ -347,8 +445,10 @@
   let (pt-start, pt-end) = (points.at(0), points.at(1))
 
   cetz.draw.get-ctx(ctx => {
-    let a = cetz.coordinate.resolve(ctx, pt-start).at(1)
-    let b = cetz.coordinate.resolve(ctx, pt-end).at(1)
+    let first-is-elem = _is-element-with-def-anchor(pt-start)
+    let last-is-elem = _is-element-with-def-anchor(pt-end)
+
+    let (ctx, a, b) = cetz.coordinate.resolve(ctx, pt-start, pt-end)
     let (sa, sb) = _resolve-shift-pair(ctx, shift)
     let bend-val = _resolve-3w-bend(ctx, a, b, routing-dir, bend)
     let _eps = 1e-10
@@ -364,6 +464,23 @@
     }
 
     let (a-shifted, b-shifted, p1, p2) = _resolve-3w-points(a, b, routing, routing-dir, sa, sb, bend-val)
+
+    if first-is-elem {
+      let elem = ctx.nodes.at(pt-start)
+      a = _element-line-intersection(ctx, elem, a, p1)
+      // Recalculate a-shifted and p1
+      let res = _resolve-3w-points(a, b, routing, routing-dir, sa, sb, bend-val)
+      a-shifted = res.at(0)
+      p1 = res.at(2)
+    }
+    if last-is-elem {
+      let elem = ctx.nodes.at(pt-end)
+      b = _element-line-intersection(ctx, elem, b, p2)
+      // Recalculate b-shifted and p2
+      let res = _resolve-3w-points(a, b, routing, routing-dir, sa, sb, bend-val)
+      b-shifted = res.at(1)
+      p2 = res.at(3)
+    }
 
     cetz.draw.line(
       a-shifted,
