@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test runner for lib/nodes.typ.
+Test runner for proxim.
 
 For each tests/<name>.typ file:
   - Compile it to a PNG with `typst compile --root <repo-root>`
@@ -138,7 +138,7 @@ def run_tests(names: list[str], update: bool) -> int:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Run visual regression tests for lib/nodes.typ"
+        description="Run visual regression tests for proxim"
     )
     parser.add_argument(
         "--update",
