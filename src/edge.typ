@@ -509,33 +509,34 @@
 /// Routing modes (controlled by `routing`):
 /// - `none` (default): a straight line between the two positional points.
 ///   `shift` is ignored in this mode.
+///   If a point is a named element (e.g. `"A"`), the line will automatically
+///   intersect with the element's border.
 /// - `"horizontal"`: a single horizontal segment at the start point's y
 ///   coordinate. `shift` offsets the line vertically.
+///   If a point is a named element, the line automatically intersects with
+///   the element's border along the horizontal axis.
 /// - `"vertical"`: a single vertical segment at the start point's x
 ///   coordinate. `shift` offsets the line horizontally.
+///   If a point is a named element, the line automatically intersects with
+///   the element's border along the vertical axis.
 /// - `"2w-north"`, `"2w-south"`, `"2w-east"`, `"2w-west"`: a 2-segment
 ///   orthogonal route with one elbow. `2w-north`/`2w-south` go vertical first
 ///   to the end point's y coordinate, then horizontal; `2w-east`/`2w-west` go
 ///   horizontal first to the end point's x coordinate, then vertical. `shift`
-///   offsets the two route segments: the first value shifts the first segment,
-///   the second value shifts the second segment. For `2w-north`/`2w-south`
-///   that means `(x-shift, y-shift)`; for `2w-east`/`2w-west` it means
-///   `(y-shift, x-shift)`. A single value applies to both. `bend` is ignored.
+///   offsets the two route segments.
+///   If a point is a named element, the route automatically intersects with
+///   the element's border along the first/last segment's direction.
 /// - `"3w-north"`, `"3w-south"`, `"3w-east"`, `"3w-west"`: a 3-segment
 ///   orthogonal route. The middle segment runs perpendicular to the named
 ///   direction (horizontal for north/south, vertical for east/west). `bend`
-///   controls how far the route bends before turning. `auto` (the default)
-///   chooses half the x distance for `3w-north`/`3w-south` when the endpoints
-///   share y and otherwise half the y distance; `3w-east`/`3w-west`
-///   analogously choose half the y distance when the endpoints share x and
-///   otherwise half the x distance. `"same-dir"` always keeps both outer legs
-///   moving in the routing direction, so it uses half the y distance for
-///   `3w-north`/`3w-south` and half the x distance for `3w-east`/`3w-west`.
-///   `"opposite-dir"` instead returns to the starting axis, so it uses half
-///   the x distance for `3w-north`/`3w-south` and half the y distance for
-///   `3w-east`/`3w-west`. `shift` offsets each endpoint along the middle
-///   segment direction and may be a single value or a `(shift-a, shift-b)`
-///   array for independent per-endpoint control.
+///   controls how far the route bends before turning.
+///   If a point is a named element, the route automatically intersects with
+///   the element's border along the first/last segment's direction.
+///
+/// Note: When passing a named element as a coordinate (e.g., `"A"`), `edge`
+/// calculates the intersection with the element's border based on the
+/// chosen routing strategy, similar to `cetz.draw.line`. To use a specific
+/// anchor instead, use the `"A.anchor"` syntax.
 ///
 /// - `label` (`content` or `none`) -- Label to render alongside the edge.
 ///   Defaults to `none`.
@@ -580,9 +581,8 @@
 ///   Must be non-zero when supplied explicitly as a length. Defaults to `auto`.
 /// - `shift` (`length` or `array`) -- Shift applied to the route segments. For
 ///   2-segment routing this may be a single value or `(shift-first,
-///   shift-second)`.
-///   For 3-segment routing this may also be `(shift-a, shift-b)`. Defaults
-///   to `0`.
+///   shift-second)`. For 3-segment routing this may also be `(shift-a, shift-b)`.
+//    Defaults to `0`.
 /// - `..args` -- Remaining positional arguments are the line's coordinate
 ///   points; named arguments are forwarded as CeTZ `line` style options
 ///   (e.g. `name`, `stroke`, `mark`, ...).

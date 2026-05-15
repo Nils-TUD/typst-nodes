@@ -70,6 +70,12 @@
   let edge = dir.slice(0, -3)
   let edge-pt = cetz.coordinate.resolve(ctx, (name: el, anchor: edge)).at(1)
 
+  let (dist-x, dist-y) = if type(dist) == array {
+    dist
+  } else {
+    (dist, dist)
+  }
+
   let align-offset = (0, 0, 0)
   if align != "center" {
     let el-size = util.get-element-size(ctx, el)
@@ -99,7 +105,9 @@
   let nx = normal.at(0)
   let ny = normal.at(1)
   let halfproj = calc.abs(nx) * (width / 2) + calc.abs(ny) * (height / 2)
-  let shift = if edge.contains("-") { dist } else { dist + halfproj }
+  
+  let shift-x = if edge.contains("-") { dist-x } else { dist-x + halfproj }
+  let shift-y = if edge.contains("-") { dist-y } else { dist-y + halfproj }
 
   let (ax, ay) = if edge == "south-west" { (-width, -height) } else if edge == "south-east" { (0, -height) } else if (
     edge == "north-west"
@@ -107,7 +115,7 @@
 
   let offset = cetz.vector.add(
     cetz.vector.add(
-      (nx * shift, ny * shift, 0),
+      (nx * shift-x, ny * shift-y, 0),
       align-offset,
     ),
     (ax, ay, 0),
@@ -120,18 +128,24 @@
 /// Returns `(origin, size)` for a rectangle placed inside the referenced
 /// element.
 #let resolve-inner(pos, el, dist, width, height) = {
-  let y-start = if pos.starts-with("in-north") {
-    -height - dist
-  } else if pos.starts-with("in-south") {
+  let (dist-x, dist-y) = if type(dist) == array {
     dist
+  } else {
+    (dist, dist)
+  }
+
+  let y-start = if pos.starts-with("in-north") {
+    -height - dist-y
+  } else if pos.starts-with("in-south") {
+    dist-y
   } else {
     -height / 2
   }
 
   let x-start = if pos.ends-with("west") {
-    dist
+    dist-x
   } else if pos.ends-with("east") {
-    -width - dist
+    -width - dist-x
   } else {
     -width / 2
   }
@@ -210,11 +224,19 @@
   let (dir, spec) = c.pairs().first()
   if dir in outer-coords {
     let (el, dist, align) = parse-placement-spec(spec)
-    let dist = cetz.util.resolve-number(ctx, dist)
+    let dist = if type(dist) == array {
+      dist.map(d => cetz.util.resolve-number(ctx, d))
+    } else {
+      cetz.util.resolve-number(ctx, dist)
+    }
     resolve-outer(ctx, dir, el, dist, align, 0, 0)
   } else if dir in inner-coords {
     let (el, dist, _) = parse-placement-spec(spec)
-    let dist = cetz.util.resolve-number(ctx, dist)
+    let dist = if type(dist) == array {
+      dist.map(d => cetz.util.resolve-number(ctx, d))
+    } else {
+      cetz.util.resolve-number(ctx, dist)
+    }
     resolve-inner(dir, el, dist, 0, 0).at(0)
   } else if dir == "between" {
     let (el-a, el-b) = spec

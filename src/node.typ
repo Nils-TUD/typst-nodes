@@ -34,7 +34,11 @@
   }
 
   let (el, dist, align) = coord.parse-placement-spec(spec)
-  let dist = cetz.util.resolve-number(ctx, dist)
+  let dist = if type(dist) == array {
+    dist.map(d => cetz.util.resolve-number(ctx, d))
+  } else {
+    cetz.util.resolve-number(ctx, dist)
+  }
 
   if dir in coord.outer-coords {
     let (width, height) = coord.resolve-node-size(ctx, width, height)
@@ -68,22 +72,28 @@
 
 #let _resolve-body-placement(name, body-pos, body-dist) = {
   let body-anc = name + "." + body-pos
+  let (dist-x, dist-y) = if type(body-dist) == array {
+    body-dist
+  } else {
+    (body-dist, body-dist)
+  }
+
   if body-pos == "north" {
-    ((rel: (0, -body-dist), to: body-anc), "north")
+    ((rel: (0, -dist-y), to: body-anc), "north")
   } else if body-pos == "south" {
-    ((rel: (0, body-dist), to: body-anc), "south")
+    ((rel: (0, dist-y), to: body-anc), "south")
   } else if body-pos == "west" {
-    ((rel: (body-dist, 0), to: body-anc), "west")
+    ((rel: (dist-x, 0), to: body-anc), "west")
   } else if body-pos == "east" {
-    ((rel: (-body-dist, 0), to: body-anc), "east")
+    ((rel: (-dist-x, 0), to: body-anc), "east")
   } else if body-pos == "north-west" {
-    ((rel: (body-dist, -body-dist), to: body-anc), "north-west")
+    ((rel: (dist-x, -dist-y), to: body-anc), "north-west")
   } else if body-pos == "north-east" {
-    ((rel: (-body-dist, -body-dist), to: body-anc), "north-east")
+    ((rel: (-dist-x, -dist-y), to: body-anc), "north-east")
   } else if body-pos == "south-west" {
-    ((rel: (body-dist, body-dist), to: body-anc), "south-west")
+    ((rel: (dist-x, dist-y), to: body-anc), "south-west")
   } else if body-pos == "south-east" {
-    ((rel: (-body-dist, body-dist), to: body-anc), "south-east")
+    ((rel: (-dist-x, dist-y), to: body-anc), "south-east")
   } else {
     (name, "center")
   }
@@ -99,8 +109,10 @@
 ///   - `"north-of"`, `"south-of"`, `"east-of"`, `"west-of"`,
 ///     `"north-east-of"`, `"north-west-of"`, `"south-east-of"`, `"south-west-of"`:
 ///     places the node adjacent to an existing named element. The value may be
-///     just the element name (string), a two-element array `(name, dist)`, or a
-///     three-element array `(name, dist, align)`. The `align` is `"left"`, `"right"`,
+///     just the element name (string), a two-element array `(name, dist)`,
+///     a three-element array `(name, dist, align)`, or a distance that is itself
+///     a two-element array `(dx, dy)` to specify horizontal and vertical distance
+///     differently. The `align` is `"left"`, `"right"`,
 ///     `"top"`, or `"bottom"` and specifies the alignment of the new element relative
 ///     to the element `name`. For example, with `"north-of"` and `"left"` the new
 ///     element is placed north of the `name` and its left border is aligned the
@@ -121,8 +133,9 @@
 /// - `body-pos` (`string`) -- Anchor of the node's rectangle used to attach
 ///   the body. One of `"center"`, `"north"`, `"south"`, `"east"`, `"west"`.
 ///   Defaults to `"center"`.
-/// - `body-dist` (`length`) -- Additional offset between the body and the
-///   `body-pos` anchor. Defaults to `0pt`.
+/// - `body-dist` (`length` or `array`) -- Additional offset between the body and the
+///   `body-pos` anchor. Can be a single `length` or an array `(dx, dy)`.
+///   Defaults to `0pt`.
 /// - `body-align` (`alignment`) -- Typst alignment applied to the body
 ///   content. Defaults to `center`.
 /// - `body-angle` (`angle`) -- Rotation applied to the body content before
