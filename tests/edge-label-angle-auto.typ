@@ -1,5 +1,5 @@
 // Test: edge label with label-angle:auto follows the selected segment direction
-#import "@preview/cetz:0.4.2"
+#import "@preview/cetz:0.5.2"
 #import "/src/lib.typ": canvas, edge, node
 
 #set page(width: 12cm, height: 11cm, margin: 5pt)

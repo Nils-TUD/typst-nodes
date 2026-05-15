@@ -3,7 +3,7 @@
 // body-pos places the label content flush against one of the node's edges
 // (instead of centered), offset outward by body-dist.
 // Also tests body-align (left/center/right alignment of the label text).
-#import "@preview/cetz:0.4.2"
+#import "@preview/cetz:0.5.2"
 #import "/src/lib.typ": canvas, node
 
 #set page(width: 10cm, height: 10cm, margin: 5pt)

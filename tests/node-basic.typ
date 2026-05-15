@@ -1,5 +1,5 @@
 // Test: basic node at an absolute coordinate
-#import "@preview/cetz:0.4.2"
+#import "@preview/cetz:0.5.2"
 #import "/src/lib.typ": canvas, node
 
 #set page(width: 6cm, height: 4cm, margin: 5pt)

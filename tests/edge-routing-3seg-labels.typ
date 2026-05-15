@@ -4,7 +4,7 @@
 //   3w-east/west:   seg 2 is vertical   → positive dist = east,  negative = west
 // Both 3w-north and 3w-south with the same positive dist must place their
 // labels on the same (north) side of the horizontal middle segment.
-#import "@preview/cetz:0.4.2"
+#import "@preview/cetz:0.5.2"
 #import "/src/lib.typ": canvas, edge, node
 
 #set page(width: 10cm, height: 9cm, margin: 5pt)

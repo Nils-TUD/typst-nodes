@@ -2,7 +2,7 @@
 //
 // By default bend is auto (half the span). Here we test an explicit bend
 // value both smaller and larger than the default.
-#import "@preview/cetz:0.4.2"
+#import "@preview/cetz:0.5.2"
 #import "/src/lib.typ": canvas, edge, node
 
 #set page(width: 10cm, height: 11cm, margin: 5pt)

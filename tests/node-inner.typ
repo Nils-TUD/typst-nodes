@@ -1,6 +1,6 @@
 // Test: child nodes placed inside a parent with inner positioning
 // (in-north, in-south, in-east, in-west, in-north-west, etc.)
-#import "@preview/cetz:0.4.2"
+#import "@preview/cetz:0.5.2"
 #import "/src/lib.typ": canvas, node
 
 #set page(width: 7cm, height: 7cm, margin: 5pt)

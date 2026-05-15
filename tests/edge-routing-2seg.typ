@@ -1,5 +1,5 @@
 // Test: edges with 2-segment routing (2w-north, 2w-south, 2w-east, 2w-west)
-#import "@preview/cetz:0.4.2"
+#import "@preview/cetz:0.5.2"
 #import "/src/lib.typ": canvas, edge, node
 
 #set page(width: 10cm, height: 10cm, margin: 5pt)

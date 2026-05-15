@@ -1,5 +1,5 @@
 // Test: node placed with "between" positioning
-#import "@preview/cetz:0.4.2"
+#import "@preview/cetz:0.5.2"
 #import "/src/lib.typ": canvas, node
 
 #set page(width: 8cm, height: 4cm, margin: 5pt)

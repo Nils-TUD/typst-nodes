@@ -1,6 +1,6 @@
 // Test: 3-segment routing with auto bend choosing the midpoint when both outer
 // legs can point in the routing direction.
-#import "@preview/cetz:0.4.2"
+#import "@preview/cetz:0.5.2"
 #import "/src/lib.typ": canvas, edge, node
 
 #set page(width: 12cm, height: 10cm, margin: 5pt)

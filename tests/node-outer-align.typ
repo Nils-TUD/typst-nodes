@@ -7,7 +7,7 @@
 // east-of / west-of accept align: "top" | "center" | "bottom"
 //   top    → new node's top edge aligns with reference's top edge
 //   bottom → new node's bottom edge aligns with reference's bottom edge
-#import "@preview/cetz:0.4.2"
+#import "@preview/cetz:0.5.2"
 #import "/src/lib.typ": canvas, node
 
 #set page(width: 10cm, height: 10cm, margin: 5pt)

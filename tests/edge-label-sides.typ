@@ -1,6 +1,6 @@
 // Test: edge label placement using label-pos (segment, position, distance)
 // Demonstrates positive/negative dist on horizontal and vertical segments.
-#import "@preview/cetz:0.4.2"
+#import "@preview/cetz:0.5.2"
 #import "/src/lib.typ": canvas, edge, node
 
 #set page(width: 12cm, height: 10cm, margin: 5pt)

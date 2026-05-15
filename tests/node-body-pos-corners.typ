@@ -3,7 +3,7 @@
 // body-pos can be set to "north-west", "north-east", "south-west", or
 // "south-east" to anchor the label at a corner of the node, offset inward
 // diagonally by body-dist along both axes.
-#import "@preview/cetz:0.4.2"
+#import "@preview/cetz:0.5.2"
 #import "/src/lib.typ": canvas, node
 
 #set page(width: 10cm, height: 8cm, margin: 5pt)

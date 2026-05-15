@@ -1,5 +1,5 @@
 // Test: edges with labels (label, label-pos, label-angle)
-#import "@preview/cetz:0.4.2"
+#import "@preview/cetz:0.5.2"
 #import "/src/lib.typ": canvas, edge, node
 
 #set page(width: 12cm, height: 8cm, margin: 5pt)
