@@ -68,7 +68,7 @@
 /// `width` and `height` next to the referenced element.
 #let resolve-outer(ctx, dir, el, dist, align, width, height) = {
   let edge = dir.slice(0, -3)
-  let edge-pt = cetz.coordinate.resolve(ctx, (name: el, anchor: edge)).at(1)
+  let edge-pt = util.resolve-element-anchor(ctx, el, edge)
 
   let (dist-x, dist-y) = if type(dist) == array {
     dist

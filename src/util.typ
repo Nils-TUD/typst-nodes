@@ -9,6 +9,20 @@
 
 #let nodes-canvas-key = "__nodes_canvas__"
 
+#let _with-anchor(name, anchor) = {
+  if type(name) != str or not name.contains(".") {
+    return (name: name, anchor: anchor)
+  }
+
+  let (root, ..nested) = name.split(".")
+  let anchor = if type(anchor) == array {
+    nested + anchor
+  } else {
+    nested + (anchor,)
+  }
+  (name: root, anchor: anchor)
+}
+
 /// Assert that the current CeTZ context was created by `nodes.canvas(...)`.
 ///
 /// Shared helpers that depend on the nodes coordinate resolver call this to
@@ -20,55 +34,24 @@
   )
 }
 
+/// Resolve an anchor on a named element, including elements inside CeTZ groups.
+#let resolve-element-anchor(ctx, name, anchor) = {
+  cetz.coordinate.resolve(ctx, _with-anchor(name, anchor)).at(1)
+}
+
 /// Return the axis-aligned size `(width, height, depth)` of a named CeTZ node.
 ///
 /// The size is computed from the element's drawable bounds and is used by the
 /// coordinate helpers when placing nodes relative to other elements.
 #let get-element-size(ctx, name) = {
-  import cetz: drawable, path-util
-
-  let element = ctx.nodes.at(name)
-  let min-pt = (calc.inf, calc.inf, calc.inf)
-  let max-pt = (-calc.inf, -calc.inf, -calc.inf)
-
-  for drawable in drawable.filter-tagged(element.drawables, drawable.TAG.no-bounds) {
-    if drawable.type == "path" {
-      for pt in path-util.bounds(drawable.segments) {
-        min-pt = (
-          calc.min(min-pt.at(0), pt.at(0)),
-          calc.min(min-pt.at(1), pt.at(1)),
-          calc.min(min-pt.at(2), pt.at(2)),
-        )
-        max-pt = (
-          calc.max(max-pt.at(0), pt.at(0)),
-          calc.max(max-pt.at(1), pt.at(1)),
-          calc.max(max-pt.at(2), pt.at(2)),
-        )
-      }
-    } else if drawable.type == "content" {
-      let (x, y, _, w, h) = drawable.pos + (drawable.width, drawable.height)
-      let corners = (
-        (x + w / 2, y - h / 2, 0.0),
-        (x - w / 2, y + h / 2, 0.0),
-      )
-      for pt in corners {
-        min-pt = (
-          calc.min(min-pt.at(0), pt.at(0)),
-          calc.min(min-pt.at(1), pt.at(1)),
-          calc.min(min-pt.at(2), pt.at(2)),
-        )
-        max-pt = (
-          calc.max(max-pt.at(0), pt.at(0)),
-          calc.max(max-pt.at(1), pt.at(1)),
-          calc.max(max-pt.at(2), pt.at(2)),
-        )
-      }
-    }
-  }
+  let west = resolve-element-anchor(ctx, name, "west")
+  let east = resolve-element-anchor(ctx, name, "east")
+  let north = resolve-element-anchor(ctx, name, "north")
+  let south = resolve-element-anchor(ctx, name, "south")
 
   (
-    calc.abs(max-pt.at(0) - min-pt.at(0)),
-    calc.abs(max-pt.at(1) - min-pt.at(1)),
-    calc.abs(max-pt.at(2) - min-pt.at(2)),
+    calc.abs(east.at(0) - west.at(0)),
+    calc.abs(north.at(1) - south.at(1)),
+    0,
   )
 }
