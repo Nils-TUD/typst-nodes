@@ -50,15 +50,145 @@
   width-support + height-support
 }
 
-#let _resolve-label-angle(p0, p1, label-angle) = {
+#let _resolve-label-angle-from-delta(dx, dy, label-angle) = {
   if label-angle == auto {
-    let dx = p1.at(0) - p0.at(0)
-    let dy = p1.at(1) - p0.at(1)
     let angle = calc.atan2(dx, -dy)
     if calc.abs(angle) > 90deg and calc.abs(angle) < 180deg { angle + 180deg } else { angle }
   } else {
     label-angle
   }
+}
+
+#let _resolve-label-angle(p0, p1, label-angle) = {
+  _resolve-label-angle-from-delta(p1.at(0) - p0.at(0), p1.at(1) - p0.at(1), label-angle)
+}
+
+#let _place-label-content(ctx, pt, label, dist, label-align, resolved-label-angle, normal-x, normal-y) = {
+  let label-content = rotate(resolved-label-angle)[#label]
+
+  if dist == 0.0 {
+    cetz.draw.content(pt, anchor: "center", align(label-align)[#label-content])
+  } else {
+    let (label-width, label-height) = cetz.util.measure(ctx, label)
+    let sign = if dist > 0 { 1.0 } else { -1.0 }
+    let support = _rotated-rect-support(label-width, label-height, resolved-label-angle, normal-x, normal-y)
+    let offset = calc.abs(dist) + support
+    let label-pt = (
+      pt.at(0) + sign * normal-x * offset,
+      pt.at(1) + sign * normal-y * offset,
+      pt.at(2),
+    )
+    cetz.draw.content(label-pt, anchor: "center", align(label-align)[#label-content])
+  }
+}
+
+#let _clamp(v, low, high) = {
+  calc.max(low, calc.min(high, v))
+}
+
+#let _is-bezier-control-dir(control) = {
+  // Ordinary CeTZ coordinates can also be dictionaries, so only treat
+  // `control` specially if the caller explicitly opts into the auto-control
+  // variant via a `dir` key.
+  type(control) == dictionary and "dir" in control
+}
+
+#let _resolve-bezier-bend-dir(a, b, bend-dir) = {
+  if bend-dir == auto {
+    let dx = b.at(0) - a.at(0)
+    let dy = b.at(1) - a.at(1)
+    if calc.abs(dx) >= calc.abs(dy) { "north" } else { "east" }
+  } else {
+    assert(
+      bend-dir == "north" or bend-dir == "south" or bend-dir == "east" or bend-dir == "west",
+      message: "bezier bend-dir must be auto, \"north\", \"south\", \"east\", or \"west\"",
+    )
+    bend-dir
+  }
+}
+
+#let _resolve-auto-bezier-control(a, b, control) = {
+  let dx = b.at(0) - a.at(0)
+  let dy = b.at(1) - a.at(1)
+  let mid = ((a.at(0) + b.at(0)) / 2, (a.at(1) + b.at(1)) / 2, a.at(2))
+  let span = (calc.abs(dx) + calc.abs(dy)) / 2
+  // Keep the current heuristic simple and deterministic: bow by one third of
+  // the average axis span, but move along the normal of the a->b segment so the
+  // control point stays perpendicular to the edge itself.
+  let offset = span / 3
+  let bend-dir = if _is-bezier-control-dir(control) { control.at("dir") } else { auto }
+  let bend-dir = _resolve-bezier-bend-dir(a, b, bend-dir)
+  let len = calc.sqrt(dx * dx + dy * dy)
+  let raw-normal = if len < 1e-6 { (0, 1) } else { (-dy / len, dx / len) }
+  // `dir` now selects which side of the line to use. For horizontal/vertical
+  // cases this matches the named cardinal direction exactly; for diagonal lines
+  // we choose the sign whose normal points most strongly toward that direction.
+  let sign = if bend-dir == "north" {
+    if raw-normal.at(1) >= 0 { 1 } else { -1 }
+  } else if bend-dir == "south" {
+    if raw-normal.at(1) <= 0 { 1 } else { -1 }
+  } else if bend-dir == "east" {
+    if raw-normal.at(0) >= 0 { 1 } else { -1 }
+  } else {
+    if raw-normal.at(0) <= 0 { 1 } else { -1 }
+  }
+  let nx = sign * raw-normal.at(0)
+  let ny = sign * raw-normal.at(1)
+  (mid.at(0) + nx * offset, mid.at(1) + ny * offset, mid.at(2))
+}
+
+#let _resolve-bezier-control(ctx, a, b, control) = {
+  if control == auto or _is-bezier-control-dir(control) {
+    (true, _resolve-auto-bezier-control(a, b, control))
+  } else {
+    // Anything else is treated as a normal CeTZ coordinate, including
+    // dictionary coordinates such as `(rel: ..., to: ...)`.
+    (false, cetz.coordinate.resolve(ctx, control).at(1))
+  }
+}
+
+#let _quadratic-bezier-point(a, control, b, t) = {
+  let u = 1 - t
+  (
+    u * u * a.at(0) + 2 * u * t * control.at(0) + t * t * b.at(0),
+    u * u * a.at(1) + 2 * u * t * control.at(1) + t * t * b.at(1),
+    u * u * a.at(2) + 2 * u * t * control.at(2) + t * t * b.at(2),
+  )
+}
+
+#let _quadratic-bezier-derivative(a, control, b, t) = {
+  let u = 1 - t
+  (
+    2 * (u * (control.at(0) - a.at(0)) + t * (b.at(0) - control.at(0))),
+    2 * (u * (control.at(1) - a.at(1)) + t * (b.at(1) - control.at(1))),
+    2 * (u * (control.at(2) - a.at(2)) + t * (b.at(2) - control.at(2))),
+  )
+}
+
+#let _place-bezier-label(line-name, label, pos-ratio, dist, label-align, label-angle, a, control, b) = {
+  let t = _clamp(float(pos-ratio), 0.0, 1.0)
+  let pt = _quadratic-bezier-point(a, control, b, t)
+  let deriv = _quadratic-bezier-derivative(a, control, b, t)
+  let _eps = 1e-6
+  let raw-dx = deriv.at(0)
+  let raw-dy = deriv.at(1)
+  // A quadratic Bezier can have a zero derivative at isolated points. When that
+  // happens, fall back to the overall start->end direction so auto-rotation and
+  // normal placement remain well-defined.
+  let dx = if calc.sqrt(raw-dx * raw-dx + raw-dy * raw-dy) < _eps { b.at(0) - a.at(0) } else { raw-dx }
+  let dy = if calc.sqrt(raw-dx * raw-dx + raw-dy * raw-dy) < _eps { b.at(1) - a.at(1) } else { raw-dy }
+  let len = calc.sqrt(dx * dx + dy * dy)
+
+  let (normal-x, normal-y) = if len < _eps {
+    (0.0, 1.0)
+  } else {
+    (-dy / len, dx / len)
+  }
+  let resolved-label-angle = _resolve-label-angle-from-delta(dx, dy, label-angle)
+
+  cetz.draw.get-ctx(ctx => {
+    _place-label-content(ctx, pt, label, dist, label-align, resolved-label-angle, normal-x, normal-y)
+  })
 }
 
 // Place a label alongside a named CeTZ line segment.
@@ -95,39 +225,24 @@
     let p0 = cetz.coordinate.resolve(ctx, (name: seg-name, anchor: "0%")).at(1)
     let p1 = cetz.coordinate.resolve(ctx, (name: seg-name, anchor: "100%")).at(1)
     let resolved-label-angle = _resolve-label-angle(p0, p1, label-angle)
-    let label-content = rotate(resolved-label-angle)[#label]
     let pos-pct = calc.round(float(pos-ratio) * 100)
     let pt = cetz.coordinate.resolve(ctx, (name: seg-name, anchor: str(pos-pct) + "%")).at(1)
+    let dx = calc.abs(p1.at(0) - p0.at(0))
+    let dy = calc.abs(p1.at(1) - p0.at(1))
+    let _eps = 1e-6
 
-    if dist == 0.0 {
-      cetz.draw.content(pt, anchor: "center", align(label-align)[#label-content])
+    let (normal-x, normal-y) = if dy < _eps {
+      (0.0, 1.0)
+    } else if dx < _eps {
+      (1.0, 0.0)
     } else {
-      let (label-width, label-height) = cetz.util.measure(ctx, label)
-      let dx = calc.abs(p1.at(0) - p0.at(0))
-      let dy = calc.abs(p1.at(1) - p0.at(1))
-      let _eps = 1e-6
-
-      let (normal-x, normal-y) = if dy < _eps {
-        (0.0, 1.0)
-      } else if dx < _eps {
-        (1.0, 0.0)
-      } else {
-        let raw-dx = p1.at(0) - p0.at(0)
-        let raw-dy = p1.at(1) - p0.at(1)
-        let len = calc.sqrt(raw-dx * raw-dx + raw-dy * raw-dy)
-        (-raw-dy / len, raw-dx / len)
-      }
-
-      let sign = if dist > 0 { 1.0 } else { -1.0 }
-      let support = _rotated-rect-support(label-width, label-height, resolved-label-angle, normal-x, normal-y)
-      let offset = calc.abs(dist) + support
-      let label-pt = (
-        pt.at(0) + sign * normal-x * offset,
-        pt.at(1) + sign * normal-y * offset,
-        pt.at(2),
-      )
-      cetz.draw.content(label-pt, anchor: "center", align(label-align)[#label-content])
+      let raw-dx = p1.at(0) - p0.at(0)
+      let raw-dy = p1.at(1) - p0.at(1)
+      let len = calc.sqrt(raw-dx * raw-dx + raw-dy * raw-dy)
+      (-raw-dy / len, raw-dx / len)
     }
+
+    _place-label-content(ctx, pt, label, dist, label-align, resolved-label-angle, normal-x, normal-y)
   })
 }
 
@@ -503,6 +618,59 @@
   })
 }
 
+#let _draw-bezier(points, line-name, style, label, label-pos, label-align, label-angle, control) = {
+  assert(points.len() == 2, message: "bezier routing requires exactly 2 points")
+  let (pt-start, pt-end) = (points.at(0), points.at(1))
+
+  cetz.draw.get-ctx(ctx => {
+    let first-is-elem = _is-element-with-def-anchor(pt-start)
+    let last-is-elem = _is-element-with-def-anchor(pt-end)
+
+    let (ctx, start-center, end-center) = cetz.coordinate.resolve(ctx, pt-start, pt-end)
+    let a = start-center
+    let b = end-center
+    let (auto-control, resolved-control) = _resolve-bezier-control(ctx, a, b, control)
+
+    if first-is-elem {
+      let elem = ctx.nodes.at(pt-start)
+      a = _element-line-intersection(ctx, elem, a, resolved-control)
+    }
+    if last-is-elem {
+      let elem = ctx.nodes.at(pt-end)
+      b = _element-line-intersection(ctx, elem, b, resolved-control)
+    }
+
+    if auto-control {
+      // The automatic control point depends on the actual endpoints. If an
+      // endpoint snaps to a node border, recompute the control point from the
+      // adjusted coordinates so the curve keeps the intended bend shape.
+      resolved-control = _resolve-auto-bezier-control(a, b, control)
+
+      if first-is-elem {
+        let elem = ctx.nodes.at(pt-start)
+        a = _element-line-intersection(ctx, elem, start-center, resolved-control)
+      }
+      if last-is-elem {
+        let elem = ctx.nodes.at(pt-end)
+        b = _element-line-intersection(ctx, elem, end-center, resolved-control)
+      }
+    }
+
+    cetz.draw.bezier(
+      a,
+      b,
+      resolved-control,
+      name: line-name,
+      ..style,
+    )
+
+    if label != none {
+      let (_, pos-ratio, dist) = _parse-label-pos(label-pos, default-seg: 1, default-dist: 0.3)
+      _place-bezier-label(line-name, label, pos-ratio, dist, label-align, label-angle, a, resolved-control, b)
+    }
+  })
+}
+
 /// Draw a directed or undirected edge (line) between two CeTZ coordinates or
 /// named element anchors, with optional label and routing.
 ///
@@ -570,15 +738,24 @@
 ///   content. Defaults to `center`.
 /// - `label-angle` (`angle` or `auto`) -- Rotation applied to the label
 ///   content. `auto` uses the angle of the selected label segment, so the label
-///   follows the edge direction. Defaults to `0deg`.
+///   follows the edge direction. For Bezier edges, it uses the tangent angle at
+///   the chosen label position. Defaults to `0deg`.
 /// - `routing` (`none` or `string`) -- Routing strategy. One of `none`,
 ///   `"horizontal"`, `"vertical"`, `"2w-north"`, `"2w-south"`, `"2w-east"`,
-///   `"2w-west"`, `"3w-north"`, `"3w-south"`, `"3w-east"`, `"3w-west"`.
+///   `"2w-west"`, `"3w-north"`, `"3w-south"`, `"3w-east"`, `"3w-west"`,
+///   `"bezier"`.
 ///   Defaults to `none`.
 /// - `bend` (`auto` or `"same-dir"` or `"opposite-dir"` or `length`) -- Bend
 ///   distance for 3-segment routing. `"same-dir"` keeps both outer legs moving
 ///   in the routing direction; `"opposite-dir"` returns to the starting axis.
 ///   Must be non-zero when supplied explicitly as a length. Defaults to `auto`.
+/// - `control` (`auto`, `coordinate`, or dictionary) -- Control point for
+///   `routing: "bezier"`. `auto` chooses a single quadratic Bezier control
+///   point from the endpoints by offsetting their midpoint along a canonical
+///   normal. A coordinate places the control point explicitly. A dictionary with
+///   `dir` chooses the automatic bend direction while preserving the automatic
+///   control-point distance, e.g. `(dir: "south")`. Supported directions are
+///   `"north"`, `"south"`, `"east"`, and `"west"`. Defaults to `auto`.
 /// - `shift` (`length` or `array`) -- Shift applied to the route segments. For
 ///   2-segment routing this may be a single value or `(shift-first,
 ///   shift-second)`. For 3-segment routing this may also be `(shift-a, shift-b)`.
@@ -593,6 +770,7 @@
   label-angle: 0deg,
   routing: none,
   bend: auto,
+  control: auto,
   shift: 0,
   ..args,
 ) = {
@@ -616,6 +794,8 @@
 
   if routing == none {
     _draw-straight(points, line-name, style, label, label-pos, label-align, label-angle)
+  } else if routing == "bezier" {
+    _draw-bezier(points, line-name, style, label, label-pos, label-align, label-angle, control)
   } else if routing == "horizontal" or routing == "vertical" {
     _draw-axis(points, line-name, style, label, label-pos, label-align, label-angle, routing, shift)
   } else if routing-kind == "2w" {

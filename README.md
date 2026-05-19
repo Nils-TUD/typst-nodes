@@ -130,6 +130,21 @@ edge("a.south", "c.north", routing: "3w-south", bend: "opposite-dir", mark: (end
 edge("a.south", "b.south", routing: "3w-south", shift: (-.2, .2), mark: (end: ">"))
 ```
 
+#### Quadratic Bezier routing
+
+Use `routing: "bezier"` to draw a quadratic Bezier curve between two points or
+node anchors. By default, proxim chooses a single control point automatically by
+offsetting the midpoint along a canonical normal. The default is unchanged:
+mostly horizontal edges bow north, mostly vertical edges bow east. Use
+`control: (dir: ...)` to choose the automatic bend direction explicitly, or
+override the control point entirely with `control`:
+
+```typst
+edge("a.east", "b.west", routing: "bezier", mark: (end: ">"))
+edge("a.east", "b.west", routing: "bezier", control: (dir: "south"), stroke: red, mark: (end: ">"))
+edge("c.east", "d.west", routing: "bezier", control: (1.5, 2), stroke: blue, mark: (end: ">"))
+```
+
 #### Edge labels
 
 ```typst
@@ -146,6 +161,15 @@ edge("c.east", "d.west",
 // Rotate the label to follow the selected edge segment
 edge("a.south", "c.north",
   label: [diagonal],
+  label-angle: auto,
+  label-pos: (60%, 0.2),
+  mark: (end: ">"),
+)
+
+// On Bezier edges, auto uses the tangent angle at the label position
+edge("a.east", "b.west",
+  routing: "bezier",
+  label: [curved],
   label-angle: auto,
   label-pos: (60%, 0.2),
   mark: (end: ">"),
