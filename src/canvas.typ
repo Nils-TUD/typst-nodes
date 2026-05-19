@@ -7,7 +7,7 @@
 /// This mirrors `cetz.canvas(...)`, but additionally enables nested nodes
 /// coordinates such as `(rel: (1, 2), to: (east-of: "foo"))` and is required
 /// when using `node(...)` or `edge(...)`.
-#let canvas(length: 1cm, baseline: none, debug: false, background: none, stroke: none, padding: none, body) = context {
+#let canvas(length: 1cm, baseline: none, debug: false, background: none, stroke: none, padding: none, body) = {
   let init = (
     cetz.draw.register-coordinate-resolver(coord.resolve-node-coordinate).first(),
     ctx => {
